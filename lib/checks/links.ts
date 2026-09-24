@@ -1,7 +1,6 @@
 import type { Check, Finding } from '../types'
 
 const LABEL = 'Links'
-const SAMPLE_LIMIT = 10
 
 function isInternal(href: string, pageUrl: string): boolean {
   try {
@@ -37,7 +36,6 @@ export const linksCheck: Check = (page) => {
       value: `${internal.length} internal \u00b7 ${external.length} external`,
       status: 'pass',
       message: `Found ${internal.length} internal and ${external.length} external links.`,
-      items: external.slice(0, SAMPLE_LIMIT).length > 0 ? external.slice(0, SAMPLE_LIMIT) : undefined,
     },
   ]
 
@@ -49,7 +47,6 @@ export const linksCheck: Check = (page) => {
       status: 'warn',
       message: `${withoutText.length} link(s) have no anchor text.`,
       fix: 'Give every link descriptive text (or an image alt) for users and search engines.',
-      items: withoutText.slice(0, SAMPLE_LIMIT),
     })
   }
 

@@ -6,25 +6,34 @@ import { extractPageData } from '../../lib/extract'
 import type { Finding, PageData } from '../../lib/types'
 import { SerpPreview } from './SerpPreview'
 import { FindingCard } from './FindingCard'
+import { LinksPanel } from './LinksPanel'
 
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; page: PageData; findings: Finding[] }
 
+type Tab = 'audit' | 'links'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'audit', label: 'Audit' },
+  { id: 'links', label: 'Links' },
+]
+
 export default function App() {
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [tab, setTab] = useState<Tab>('audit')
 
   const scan = useCallback(async () => {
     setState({ status: 'loading' })
     try {
-      const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
-      if (!tab?.id) {
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true })
+      if (!activeTab?.id) {
         throw new Error('No active tab found.')
       }
 
       const [result] = await browser.scripting.executeScript({
-        target: { tabId: tab.id },
+        target: { tabId: activeTab.id },
         func: extractPageData,
       })
 
@@ -67,15 +76,34 @@ export default function App() {
 
       {state.status === 'ready' && (
         <>
-          <SerpPreview page={state.page} />
-          <div className="findings">
-            {state.findings.map((finding) => (
-              <FindingCard key={finding.id} finding={finding} />
+          <nav className="tabs" role="tablist">
+            {TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={tab === id}
+                className={tab === id ? 'tab active' : 'tab'}
+                onClick={() => setTab(id)}
+              >
+                {label}
+              </button>
             ))}
-          </div>
-          <footer className="footer">
-            Local-only audit · nothing leaves your browser
-          </footer>
+          </nav>
+
+          {tab === 'audit' ? (
+            <>
+              <SerpPreview page={state.page} />
+              <div className="findings">
+                {state.findings.map((finding) => (
+                  <FindingCard key={finding.id} finding={finding} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <LinksPanel page={state.page} />
+          )}
+
+          <footer className="footer">Local-only audit · nothing leaves your browser</footer>
         </>
       )}
     </div>

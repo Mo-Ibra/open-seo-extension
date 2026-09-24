@@ -107,6 +107,145 @@ body {
   gap: 8px;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Links tab */
+.links-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 4px;
+  text-align: center;
+  background: var(--card);
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.links-warning {
+  margin: 0;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.link-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+
+.link-count {
+  background: var(--border);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.link-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.link-row:last-child {
+  border-bottom: none;
+}
+
+.link-href {
+  flex: 1;
+  min-width: 0;
+  color: var(--link);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-text {
+  flex: none;
+  max-width: 45%;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-text.empty {
+  color: var(--fail);
+  font-style: italic;
+}
+
+.link-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .card {
   border: 1px solid var(--border);
   border-left-width: 3px;
