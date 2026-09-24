@@ -26,8 +26,18 @@ export interface PageData {
   canonical: string | null
   /** Contents of `<meta name="robots">` / `googlebot` tags. */
   robotsMeta: string[]
+  /** Open Graph / Twitter Card metadata. */
+  social: SocialMeta
   headings: Heading[]
   links: LinkInfo[]
+}
+
+/** Open Graph and Twitter Card tags, keyed without their prefix. */
+export interface SocialMeta {
+  /** e.g. `title`, `image`, `image:width` (from `og:*`). */
+  openGraph: Record<string, string>
+  /** e.g. `card`, `title`, `image` (from `twitter:*`). */
+  twitter: Record<string, string>
 }
 
 /** Data fetched over the network (same-origin) after the DOM is read. */

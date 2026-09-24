@@ -5,6 +5,7 @@ import { canonicalCheck } from './checks/canonical'
 import { robotsMetaCheck } from './checks/robots-meta'
 import { xRobotsTagCheck } from './checks/x-robots-tag'
 import { robotsTxtCheck } from './checks/robots-txt'
+import { socialCheck } from './checks/social'
 import { headingsCheck } from './checks/headings'
 import { linksCheck } from './checks/links'
 
@@ -19,6 +20,7 @@ export const checks: Check[] = [
   robotsMetaCheck,
   xRobotsTagCheck,
   robotsTxtCheck,
+  socialCheck,
   headingsCheck,
   linksCheck,
 ]

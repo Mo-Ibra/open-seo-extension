@@ -9,12 +9,14 @@ extension collects no data.
 
 Early MVP. It audits the current page's **title**, **meta description**,
 **canonical link**, **indexability** (`robots` meta, `X-Robots-Tag`,
-`robots.txt`), **heading structure** (H1–H6), and **internal/external links**,
-then renders a search-result preview.
+`robots.txt`), **social tags** (Open Graph / Twitter Cards), **heading
+structure** (H1–H6), and **internal/external links**, then renders a
+search-result preview. A **Links** tab lists every link, and a **Social** tab
+previews the Facebook/LinkedIn and X (Twitter) cards.
 
 ## Roadmap
 
-- [ ] More on-page checks: images/`alt`, Open Graph.
+- [ ] More on-page checks: images/`alt`.
 - [ ] Site crawler (crawl a whole site and list issues per page).
 - [ ] AI-search readiness checks (`llms.txt`, AI-crawler directives).
 

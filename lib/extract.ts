@@ -59,12 +59,33 @@ export function extractPageData(): PageData {
     .map((element) => (element.getAttribute('content') || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
 
+  const collectMeta = (
+    selector: string,
+    attribute: string,
+    prefix: string
+  ): Record<string, string> => {
+    const result: Record<string, string> = {}
+    document.querySelectorAll(selector).forEach((element) => {
+      const key = element.getAttribute(attribute)
+      const content = element.getAttribute('content')
+      if (!key || !content) return
+      result[key.toLowerCase().slice(prefix.length)] = content.trim()
+    })
+    return result
+  }
+
+  const social = {
+    openGraph: collectMeta('meta[property^="og:" i]', 'property', 'og:'),
+    twitter: collectMeta('meta[name^="twitter:" i]', 'name', 'twitter:'),
+  }
+
   return {
     url: location.href,
     title: (document.title || '').trim(),
     description: readMeta('description'),
     canonical,
     robotsMeta,
+    social,
     headings,
     links,
   }

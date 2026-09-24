@@ -8,17 +8,19 @@ import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { SerpPreview } from './SerpPreview'
 import { FindingCard } from './FindingCard'
 import { LinksPanel } from './LinksPanel'
+import { SocialPanel } from './SocialPanel'
 
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; page: PageData; findings: Finding[] }
 
-type Tab = 'audit' | 'links'
+type Tab = 'audit' | 'links' | 'social'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'audit', label: 'Audit' },
   { id: 'links', label: 'Links' },
+  { id: 'social', label: 'Social' },
 ]
 
 export default function App() {
@@ -101,7 +103,7 @@ export default function App() {
             ))}
           </nav>
 
-          {tab === 'audit' ? (
+          {tab === 'audit' && (
             <>
               <SerpPreview page={state.page} />
               <div className="findings">
@@ -110,9 +112,9 @@ export default function App() {
                 ))}
               </div>
             </>
-          ) : (
-            <LinksPanel page={state.page} />
           )}
+          {tab === 'links' && <LinksPanel page={state.page} />}
+          {tab === 'social' && <SocialPanel page={state.page} />}
 
           <footer className="footer">Local-only audit · nothing leaves your browser</footer>
         </>
