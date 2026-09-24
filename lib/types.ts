@@ -24,8 +24,18 @@ export interface PageData {
   title: string
   description: string | null
   canonical: string | null
+  /** Contents of `<meta name="robots">` / `googlebot` tags. */
+  robotsMeta: string[]
   headings: Heading[]
   links: LinkInfo[]
+}
+
+/** Data fetched over the network (same-origin) after the DOM is read. */
+export interface SiteContext {
+  robotsTxt: string | null
+  robotsTxtChecked: boolean
+  xRobotsTag: string | null
+  xRobotsTagChecked: boolean
 }
 
 export type Status = 'pass' | 'warn' | 'fail'
@@ -48,4 +58,4 @@ export interface Finding {
   items?: string[]
 }
 
-export type Check = (page: PageData) => Finding[]
+export type Check = (page: PageData, context: SiteContext) => Finding[]

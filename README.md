@@ -8,12 +8,13 @@ extension collects no data.
 ## Status
 
 Early MVP. It audits the current page's **title**, **meta description**,
-**canonical link**, **heading structure** (H1–H6), and **internal/external
-links**, then renders a search-result preview.
+**canonical link**, **indexability** (`robots` meta, `X-Robots-Tag`,
+`robots.txt`), **heading structure** (H1–H6), and **internal/external links**,
+then renders a search-result preview.
 
 ## Roadmap
 
-- [ ] More on-page checks: images/`alt`, Open Graph, `robots` meta.
+- [ ] More on-page checks: images/`alt`, Open Graph.
 - [ ] Site crawler (crawl a whole site and list issues per page).
 - [ ] AI-search readiness checks (`llms.txt`, AI-crawler directives).
 
@@ -41,6 +42,8 @@ Load the unpacked build from `.output/chrome-mv3` via `chrome://extensions`
 - `entrypoints/popup/` — the React popup UI.
 - `lib/extract.ts` — a self-contained function injected into the page to read
   its DOM (no network, no persistent content script).
+- `lib/site-context.ts` — a second injected function that reads server-side
+  signals (`robots.txt`, `X-Robots-Tag`) with same-origin requests.
 - `lib/audit.ts` — runs every check.
 - `lib/checks/` — one file per check. Adding a check is a small, self-contained
   PR.

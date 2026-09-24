@@ -3,7 +3,8 @@ import { browser } from 'wxt/browser'
 
 import { runAudit } from '../../lib/audit'
 import { extractPageData } from '../../lib/extract'
-import type { Finding, PageData } from '../../lib/types'
+import { extractSiteContext } from '../../lib/site-context'
+import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { SerpPreview } from './SerpPreview'
 import { FindingCard } from './FindingCard'
 import { LinksPanel } from './LinksPanel'
@@ -32,17 +33,27 @@ export default function App() {
         throw new Error('No active tab found.')
       }
 
-      const [result] = await browser.scripting.executeScript({
+      const [pageResult] = await browser.scripting.executeScript({
         target: { tabId: activeTab.id },
         func: extractPageData,
       })
 
-      const page = result?.result as PageData | undefined
+      const page = pageResult?.result as PageData | undefined
       if (!page) {
         throw new Error('Could not read this page. Try reloading it.')
       }
 
-      setState({ status: 'ready', page, findings: runAudit(page) })
+      const [contextResult] = await browser.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        func: extractSiteContext,
+      })
+
+      const context = contextResult?.result as SiteContext | undefined
+      if (!context) {
+        throw new Error('Could not read the server response headers.')
+      }
+
+      setState({ status: 'ready', page, findings: runAudit(page, context) })
     } catch (error) {
       setState({
         status: 'error',

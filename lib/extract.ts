@@ -53,11 +53,18 @@ export function extractPageData(): PageData {
     }
   )
 
+  const robotsMeta = Array.from(
+    document.querySelectorAll('meta[name="robots" i], meta[name="googlebot" i]')
+  )
+    .map((element) => (element.getAttribute('content') || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+
   return {
     url: location.href,
     title: (document.title || '').trim(),
     description: readMeta('description'),
     canonical,
+    robotsMeta,
     headings,
     links,
   }
