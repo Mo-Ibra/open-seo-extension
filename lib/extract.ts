@@ -29,10 +29,36 @@ export function extractPageData(): PageData {
     }
   }
 
+  const headings = Array.from(
+    document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+  ).map((element) => ({
+    level: Number(element.tagName.charAt(1)),
+    text: (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+  }))
+
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]')).map(
+    (anchor) => {
+      const imageAlt = anchor.querySelector('img[alt]')?.getAttribute('alt') || ''
+      const text =
+        (anchor.textContent || '').replace(/\s+/g, ' ').trim() ||
+        (anchor.getAttribute('aria-label') || '').trim() ||
+        (anchor.getAttribute('title') || '').trim() ||
+        imageAlt.trim()
+      return {
+        href: anchor.href,
+        rel: anchor.getAttribute('rel') || '',
+        target: anchor.getAttribute('target') || '',
+        text: text.slice(0, 100),
+      }
+    }
+  )
+
   return {
     url: location.href,
     title: (document.title || '').trim(),
     description: readMeta('description'),
     canonical,
+    headings,
+    links,
   }
 }

@@ -14,6 +14,13 @@ export function FindingCard({ finding }: { finding: Finding }) {
       <div className="card-body">
         <div className="card-value">{finding.value ?? <em>Not set</em>}</div>
         <div className="card-message">{finding.message}</div>
+        {finding.items && finding.items.length > 0 && (
+          <ul className="card-list">
+            {finding.items.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        )}
         {finding.fix && <div className="card-fix">Fix: {finding.fix}</div>}
       </div>
     </details>

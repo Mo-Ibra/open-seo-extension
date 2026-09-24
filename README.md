@@ -7,12 +7,13 @@ extension collects no data.
 
 ## Status
 
-Early MVP. It audits the current page's **title**, **meta description**, and
-**canonical link**, then renders a search-result preview.
+Early MVP. It audits the current page's **title**, **meta description**,
+**canonical link**, **heading structure** (H1–H6), and **internal/external
+links**, then renders a search-result preview.
 
 ## Roadmap
 
-- [ ] More on-page checks: headings, images/`alt`, Open Graph, `robots` meta.
+- [ ] More on-page checks: images/`alt`, Open Graph, `robots` meta.
 - [ ] Site crawler (crawl a whole site and list issues per page).
 - [ ] AI-search readiness checks (`llms.txt`, AI-crawler directives).
 

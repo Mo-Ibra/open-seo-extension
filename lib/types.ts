@@ -2,11 +2,30 @@
 // the inspected page. Keep this serializable — it crosses the page/extension
 // boundary.
 
+export interface Heading {
+  /** 1–6, corresponding to H1–H6. */
+  level: number
+  text: string
+}
+
+export interface LinkInfo {
+  /** Absolute URL. */
+  href: string
+  /** The `rel` attribute value, if any. */
+  rel: string
+  /** The `target` attribute value, if any. */
+  target: string
+  /** Accessible link text (falls back to aria-label/title/image alt). */
+  text: string
+}
+
 export interface PageData {
   url: string
   title: string
   description: string | null
   canonical: string | null
+  headings: Heading[]
+  links: LinkInfo[]
 }
 
 export type Status = 'pass' | 'warn' | 'fail'
@@ -25,6 +44,8 @@ export interface Finding {
   message: string
   /** How to fix it, if applicable. */
   fix?: string
+  /** Optional list of related details (e.g. a heading outline). */
+  items?: string[]
 }
 
 export type Check = (page: PageData) => Finding[]
