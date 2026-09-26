@@ -30,6 +30,8 @@ export interface PageData {
   social: SocialMeta
   headings: Heading[]
   links: LinkInfo[]
+  /** Total words in the page's visible text (scripts/styles excluded). */
+  wordCount: number
 }
 
 /** Open Graph and Twitter Card tags, keyed without their prefix. */

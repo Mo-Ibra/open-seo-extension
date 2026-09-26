@@ -79,6 +79,38 @@ export function extractPageData(): PageData {
     twitter: collectMeta('meta[name^="twitter:" i]', 'name', 'twitter:'),
   }
 
+  const wordCount = countWords()
+
+  /** Counts words in rendered text, skipping scripts/styles and hidden nodes. */
+  function countWords(): number {
+    if (!document.body) return 0
+
+    const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'])
+    const WORDS = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    let total = 0
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const parent = node.parentElement
+      if (!parent || SKIP_TAGS.has(parent.tagName)) continue
+
+      const element = parent as Element & {
+        checkVisibility?: (options?: Record<string, boolean>) => boolean
+      }
+      const visible =
+        typeof element.checkVisibility === 'function'
+          ? element.checkVisibility({ checkVisibilityCSS: true, contentVisibilityAuto: true })
+          : parent.getClientRects().length > 0
+      if (!visible) continue
+
+      const words = (node.textContent || '').match(WORDS)
+      if (words) total += words.length
+    }
+
+    return total
+  }
+
   return {
     url: location.href,
     title: (document.title || '').trim(),
@@ -88,5 +120,6 @@ export function extractPageData(): PageData {
     social,
     headings,
     links,
+    wordCount,
   }
 }

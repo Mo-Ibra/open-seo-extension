@@ -8,6 +8,7 @@ import { robotsTxtCheck } from './checks/robots-txt'
 import { socialCheck } from './checks/social'
 import { headingsCheck } from './checks/headings'
 import { linksCheck } from './checks/links'
+import { wordCountCheck } from './checks/word-count'
 
 /**
  * Every check that runs against a page. Adding a new check is a one-line change
@@ -23,6 +24,7 @@ export const checks: Check[] = [
   socialCheck,
   headingsCheck,
   linksCheck,
+  wordCountCheck,
 ]
 
 /** Runs all checks and flattens their findings. */

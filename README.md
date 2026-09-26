@@ -10,8 +10,8 @@ extension collects no data.
 Early MVP. It audits the current page's **title**, **meta description**,
 **canonical link**, **indexability** (`robots` meta, `X-Robots-Tag`,
 `robots.txt`), **social tags** (Open Graph / Twitter Cards), **heading
-structure** (H1–H6), and **internal/external links**, then renders a
-search-result preview. A **Links** tab lists every link, and a **Social** tab
+structure** (H1–H6), **internal/external links**, and **word count**, then
+renders a search-result preview. A **Links** tab lists every link, and a **Social** tab
 previews the Facebook/LinkedIn and X (Twitter) cards.
 
 ## Roadmap
