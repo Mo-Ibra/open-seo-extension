@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import type { PageData } from '../../lib/types'
+import { Icon } from './Icon'
 
 function absolute(value: string | undefined, base: string): string | null {
   if (!value) return null
@@ -47,11 +48,12 @@ export function SocialPanel({ page }: { page: PageData }) {
     og['image:width'] && og['image:height']
       ? `${og['image:width']}\u00d7${og['image:height']}`
       : 'dimensions unknown'
+  const missing = fields.filter(([, value]) => !value).length
 
   return (
     <div className="social-panel">
       <section className="social-section">
-        <h3 className="social-section-title">Facebook / LinkedIn</h3>
+        <h3 className="section-title">Facebook / LinkedIn</h3>
         <PreviewCard
           variant="large"
           image={image}
@@ -62,7 +64,9 @@ export function SocialPanel({ page }: { page: PageData }) {
       </section>
 
       <section className="social-section">
-        <h3 className="social-section-title">X (Twitter) {'\u00b7'} {cardType}</h3>
+        <h3 className="section-title">
+          X (Twitter) <span className="badge">{cardType}</span>
+        </h3>
         <PreviewCard
           variant={cardType === 'summary' ? 'compact' : 'large'}
           image={image}
@@ -72,10 +76,12 @@ export function SocialPanel({ page }: { page: PageData }) {
         />
       </section>
 
-      {image && <p className="social-image-meta">Image: {imageSize}</p>}
+      {image && <p className="hint">Image: {imageSize}</p>}
 
       <section className="social-section">
-        <h3 className="social-section-title">Tags</h3>
+        <h3 className="section-title">
+          Tags <span className={missing > 0 ? 'badge warn' : 'badge pass'}>{missing} missing</span>
+        </h3>
         <ul className="tag-list">
           {fields.map(([name, value]) => (
             <li className="tag-row" key={name}>
@@ -118,7 +124,10 @@ function PreviewCard({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="social-image-placeholder">No og:image</div>
+          <div className="social-image-placeholder">
+            <Icon name="sparkle" size={16} />
+            <span>No og:image</span>
+          </div>
         )}
       </div>
       <div className="social-body">

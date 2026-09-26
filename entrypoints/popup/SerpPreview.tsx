@@ -17,17 +17,69 @@ function hostname(url: string): string {
 
 /** A rough preview of how the page's title/description may appear in search. */
 export function SerpPreview({ page }: { page: PageData }) {
+  const titleLength = page.title.length
+  const descriptionLength = page.description?.length ?? 0
+
   return (
     <section className="serp" aria-label="Search result preview">
-      <div className="serp-url">{hostname(page.url)}</div>
+      <header className="serp-head">
+        <span className="serp-badge">Search preview</span>
+        <span className="serp-host">{hostname(page.url)}</span>
+      </header>
+
       <div className="serp-title">
         {page.title ? truncate(page.title, TITLE_LIMIT) : 'No title'}
       </div>
-      <div className="serp-description">
+      <Meter
+        label="title"
+        value={titleLength}
+        limit={TITLE_LIMIT}
+        tone={titleLength > TITLE_LIMIT ? 'fail' : titleLength < 20 ? 'warn' : 'pass'}
+      />
+
+      <p className="serp-description">
         {page.description
           ? truncate(page.description, DESCRIPTION_LIMIT)
-          : 'No meta description'}
-      </div>
+          : 'No meta description — search engines will improvise one.'}
+      </p>
+      <Meter
+        label="description"
+        value={descriptionLength}
+        limit={DESCRIPTION_LIMIT}
+        tone={
+          descriptionLength === 0
+            ? 'fail'
+            : descriptionLength > DESCRIPTION_LIMIT
+              ? 'warn'
+              : descriptionLength < 70
+                ? 'warn'
+                : 'pass'
+        }
+      />
     </section>
+  )
+}
+
+function Meter({
+  label,
+  value,
+  limit,
+  tone,
+}: {
+  label: string
+  value: number
+  limit: number
+  tone: string
+}) {
+  const width = Math.min(100, (value / limit) * 100)
+  return (
+    <div className={`meter ${tone}`}>
+      <span className="meter-track">
+        <span className="meter-fill" style={{ width: `${width}%` }} />
+      </span>
+      <span className="meter-text">
+        {label} {value}/{limit}
+      </span>
+    </div>
   )
 }

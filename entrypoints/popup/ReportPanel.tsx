@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react'
 
 import { buildReport, toCsv, toJson } from '../../lib/crawl/report'
 import type { SiteScanState } from '../../lib/crawl/types'
+import { EmptyState } from './EmptyState'
 import { FindingCard } from './FindingCard'
+import { Icon } from './Icon'
+import { ScoreRing } from './ScoreRing'
 
 type Filter = 'issues' | 'fail' | 'warn' | 'pass' | 'all'
 
 const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'issues', label: 'With issues' },
+  { id: 'issues', label: 'Needs work' },
   { id: 'fail', label: 'Fails' },
   { id: 'warn', label: 'Warnings' },
   { id: 'pass', label: 'Clean' },
@@ -30,10 +33,7 @@ export function ReportPanel({
   const [openPage, setOpenPage] = useState<string | null>(null)
 
   const report = useMemo(() => buildReport(state.results), [state.results])
-  const byUrl = useMemo(
-    () => new Map(state.results.map((result) => [result.url, result])),
-    [state.results]
-  )
+  const byUrl = useMemo(() => new Map(state.results.map((result) => [result.url, result])), [state.results])
 
   const pages = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -54,109 +54,148 @@ export function ReportPanel({
 
   return (
     <div className="report">
-      <div className="report-head">
-        <div className="score">
-          <div className="score-value">{report.score}</div>
-          <div className="score-label">score</div>
-        </div>
+      <section className="report-head">
+        <ScoreRing score={report.score} />
         <div className="report-stats">
-          <div>
-            <b>{report.totalPages}</b> pages
+          <div className="stat-line">
+            <b>{report.totalPages}</b> pages scanned
           </div>
-          <div>
-            <b className="fail">{report.fails}</b> failures
+          <div className="stat-line fail">
+            <b>{report.fails}</b> failures
           </div>
-          <div>
-            <b className="warn">{report.warns}</b> warnings
+          <div className="stat-line warn">
+            <b>{report.warns}</b> warnings
           </div>
-          {duration && <div>{duration}s</div>}
-          {state.skipped > 0 && <div>{state.skipped} skipped</div>}
+          <div className="stat-line muted">
+            {duration ? `${duration}s` : ''} {state.skipped > 0 && `· ${state.skipped} skipped`}
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="export-row">
-        <button className="ghost" onClick={() => download(`${host(state.origin)}.csv`, toCsv(state.origin, state.results), 'text/csv')}>
-          Export CSV
+        <button
+          className="btn subtle"
+          onClick={() =>
+            download(`${host(state.origin)}.csv`, toCsv(state.origin, state.results), 'text/csv')
+          }
+        >
+          <Icon name="download" size={13} /> CSV
         </button>
-        <button className="ghost" onClick={() => download(`${host(state.origin)}.json`, toJson(state.origin, state.results), 'application/json')}>
-          Export JSON
+        <button
+          className="btn subtle"
+          onClick={() =>
+            download(`${host(state.origin)}.json`, toJson(state.origin, state.results), 'application/json')
+          }
+        >
+          <Icon name="download" size={13} /> JSON
         </button>
-        <button className="ghost" onClick={onRestart}>
-          New scan
+        <button className="btn subtle" onClick={onRestart}>
+          <Icon name="refresh" size={13} /> New scan
         </button>
       </div>
 
-      <h3 className="report-title">Issues by type</h3>
-      {report.issues.length === 0 && <p className="hint">Nothing to fix. Nice.</p>}
-      <ul className="issue-list">
-        {report.issues.map((issue) => (
-          <li key={issue.id} className={`issue ${issue.status}`}>
-            <button className="issue-head" onClick={() => onToggleIssue(issue.id)}>
-              <span className="dot" aria-hidden="true" />
-              <strong>{issue.label}</strong>
-              <span className="issue-count">{issue.count} pages</span>
-            </button>
-            <div className="issue-message">{issue.message}</div>
-            {issue.fix && <div className="issue-fix">Fix: {issue.fix}</div>}
-            {openIssue === issue.id && (
-              <ul className="issue-urls">
-                {issue.urls.slice(0, 25).map((url) => (
-                  <li key={url} title={url}>
-                    {url.replace(/^https?:\/\//, '')}
-                  </li>
-                ))}
-                {issue.urls.length > 25 && <li className="hint">…and {issue.urls.length - 25} more</li>}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
+      <h3 className="section-title">
+        Issues by type <span className="badge">{report.issues.length}</span>
+      </h3>
 
-      <h3 className="report-title">Pages</h3>
-      <div className="filter-row">
+      {report.issues.length === 0 ? (
+        <EmptyState icon="check" title="Nothing to fix" hint="Every scanned page passed its checks." />
+      ) : (
+        <ul className="issue-list">
+          {report.issues.map((issue) => (
+            <li key={issue.id} className={`issue ${issue.status}`}>
+              <button className="issue-head" onClick={() => onToggleIssue(issue.id)}>
+                <span className="issue-icon">
+                  <Icon name={issue.status === 'fail' ? 'close' : 'alert'} size={11} />
+                </span>
+                <strong>{issue.label}</strong>
+                <span className="issue-count">{issue.count}</span>
+                <Icon name="chevron" size={13} className={openIssue === issue.id ? 'chevron open' : 'chevron'} />
+              </button>
+              <div className="issue-body">
+                <p className="issue-message">{issue.message}</p>
+                {issue.fix && (
+                  <p className="issue-fix">
+                    <Icon name="sparkle" size={12} />
+                    <span>{issue.fix}</span>
+                  </p>
+                )}
+                {openIssue === issue.id && (
+                  <ul className="issue-urls">
+                    {issue.urls.slice(0, 30).map((url) => (
+                      <li key={url} title={url}>
+                        {url.replace(/^https?:\/\//, '')}
+                      </li>
+                    ))}
+                    {issue.urls.length > 30 && <li className="hint">…and {issue.urls.length - 30} more</li>}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3 className="section-title">
+        Pages <span className="badge">{pages.length}</span>
+      </h3>
+
+      <div className="segmented" role="tablist" aria-label="Filter pages">
         {FILTERS.map((option) => (
           <button
             key={option.id}
-            className={filter === option.id ? 'preset active' : 'preset'}
+            role="tab"
+            aria-selected={filter === option.id}
+            className={filter === option.id ? 'seg-btn active' : 'seg-btn'}
             onClick={() => setFilter(option.id)}
           >
             {option.label}
           </button>
         ))}
       </div>
-      <input
-        className="search"
-        type="search"
-        placeholder="Filter pages…"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
 
-      <ul className="page-list">
-        {pages.map((page) => (
-          <li key={page.url} className={`page ${page.worst}`}>
-            <button className="page-head" onClick={() => setOpenPage((current) => (current === page.url ? null : page.url))}>
-              <span className="dot" aria-hidden="true" />
-              <span className="page-url" title={page.url}>
-                {page.url.replace(/^https?:\/\//, '')}
-              </span>
-              <span className="page-meta">
-                {page.status ?? '—'} · {page.wordCount}w
-                {page.fail > 0 && <b className="fail"> · {page.fail}</b>}
-                {page.warn > 0 && <b className="warn"> · {page.warn}</b>}
-              </span>
-            </button>
-            {openPage === page.url && (
-              <div className="page-body">
-                {(byUrl.get(page.url)?.findings ?? []).map((finding) => (
-                  <FindingCard key={finding.id} finding={finding} />
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-      {pages.length === 0 && <p className="hint">No pages match this filter.</p>}
+      <div className="search-wrap">
+        <Icon name="search" size={13} />
+        <input
+          className="search"
+          type="search"
+          placeholder="Filter pages\u2026"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+
+      {pages.length === 0 ? (
+        <p className="hint">No pages match this filter.</p>
+      ) : (
+        <ul className="page-list">
+          {pages.map((page) => (
+            <li key={page.url} className={`page ${page.worst}`}>
+              <button className="page-head" onClick={() => setOpenPage((current) => (current === page.url ? null : page.url))}>
+                <span className="page-status" aria-hidden="true" />
+                <span className="page-url" title={page.url}>
+                  {page.url.replace(/^https?:\/\//, '')}
+                </span>
+                <span className="page-meta">
+                  {page.status ?? '—'} · {page.wordCount}w
+                </span>
+                <span className="page-counts">
+                  {page.fail > 0 && <b className="fail">{page.fail}</b>}
+                  {page.warn > 0 && <b className="warn">{page.warn}</b>}
+                </span>
+                <Icon name="chevron" size={13} className={openPage === page.url ? 'chevron open' : 'chevron'} />
+              </button>
+              {openPage === page.url && (
+                <div className="page-body">
+                  {(byUrl.get(page.url)?.findings ?? []).map((finding) => (
+                    <FindingCard key={finding.id} finding={finding} />
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

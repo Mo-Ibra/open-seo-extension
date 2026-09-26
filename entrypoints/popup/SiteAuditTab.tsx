@@ -3,40 +3,18 @@ import { browser } from 'wxt/browser'
 
 import { isPersistent, loadState } from '../../lib/crawl/store'
 import { createIdleState, type SiteEvent, type SiteRequest, type SiteScanState } from '../../lib/crawl/types'
+import { EmptyState } from './EmptyState'
+import { Icon } from './Icon'
+import { ProgressRing } from './ProgressRing'
 import { ReportPanel } from './ReportPanel'
-
-/**
- * Asks the background for the current state, giving up after a short while so a
- * dead/unregistered service worker shows a message instead of a spinner.
- */
-async function handshake(origin: string): Promise<SiteScanState | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), HANDSHAKE_TIMEOUT_MS)
-  })
-
-  try {
-    const response = await Promise.race([
-      browser.runtime
-        .sendMessage({ type: 'site:getState', origin } satisfies SiteRequest)
-        .catch((error: unknown) => {
-          throw new Error(error instanceof Error ? error.message : String(error))
-        }),
-      timeout,
-    ])
-    return (response as SiteScanState | undefined) ?? null
-  } catch {
-    return null
-  } finally {
-    if (timer) clearTimeout(timer)
-  }
-}
 
 const PRESETS = [10, 25, 50, 100, 250, 500]
 /** Checkbox list is capped so a 1000-URL site stays responsive. */
 const LIST_LIMIT = 200
 
 type Phase = 'loading' | 'unsupported' | SiteScanState['status']
+
+const STEPS = ['Discover', 'Choose', 'Scan', 'Report']
 
 /** The background must answer quickly; if it does not, say so instead of spinning. */
 const HANDSHAKE_TIMEOUT_MS = 4000
@@ -136,7 +114,8 @@ export function SiteAuditTab() {
     return filtered.slice(0, LIST_LIMIT)
   }, [urls, query])
 
-  const totalSelected = custom.trim() === '' ? selected.length : Math.min(urls.length, Number(custom) || 0)
+  const totalSelected =
+    custom.trim() === '' ? selected.length : Math.min(urls.length, Number(custom) || 0)
 
   const ensurePermission = useCallback(async (): Promise<boolean> => {
     const origin = new URL(seedUrl).origin
@@ -169,56 +148,79 @@ export function SiteAuditTab() {
 
   if (phase === 'unsupported') {
     return (
-      <p className="hint">
-        {loadError ?? 'Open a normal web page first — the crawler reads that site.'}
-        <button className="ghost" onClick={() => setAttempt((value) => value + 1)}>
-          Retry
-        </button>
-      </p>
+      <EmptyState
+        icon="globe"
+        title="No website to crawl"
+        hint={loadError ?? 'Open a normal web page first — the crawler reads that site.'}
+        action={
+          <button className="btn subtle" onClick={() => setAttempt((value) => value + 1)}>
+            <Icon name="refresh" size={14} />
+            Retry
+          </button>
+        }
+      />
     )
   }
 
+  const step =
+    phase === 'idle' || phase === 'loading' ? 0 : phase === 'ready' ? 1 : phase === 'scanning' || phase === 'discovering' ? 2 : 3
+
   return (
     <div className="site">
+      <Stepper current={step} />
+
       {permissionError && (
-        <p className="error" role="alert">
-          {permissionError}
+        <p className="notice fail" role="alert">
+          <Icon name="alert" size={13} />
+          <span>{permissionError}</span>
         </p>
       )}
 
       {loadError && (
-        <p className="error" role="alert">
-          {loadError}
-          <button className="ghost" onClick={() => setAttempt((value) => value + 1)}>
+        <p className="notice warn" role="alert">
+          <Icon name="info" size={13} />
+          <span>{loadError}</span>
+          <button className="btn tiny" onClick={() => setAttempt((value) => value + 1)}>
             Retry
           </button>
         </p>
       )}
 
       {!isPersistent() && (
-        <p className="error" role="alert">
-          This build cannot save scans: the <code>storage</code> permission is missing. Reload or
-          reinstall the extension from <code>.output/chrome-mv3</code>.
+        <p className="notice fail" role="alert">
+          <Icon name="alert" size={13} />
+          <span>
+            Scans cannot be saved: the <code>storage</code> permission is missing. Reload or reinstall
+            the extension from <code>.output/chrome-mv3</code>.
+          </span>
         </p>
       )}
 
-      {phase === 'loading' && (
-        <p className="hint">
-          Preparing…
-          <button className="ghost" onClick={() => setAttempt((value) => value + 1)}>
-            Retry
-          </button>
-        </p>
-      )}
+      {phase === 'loading' && <div className="sk-block tall" />}
 
       {phase === 'idle' && (
         <section className="site-intro">
-          <p>
-            Audit a whole site in your browser: find its pages, pick how many to scan, then get one
-            report with every issue.
+          <h2 className="site-title">Audit a whole site</h2>
+          <p className="site-lead">
+            Find every page, pick how many to scan, then get one report with everything that needs
+            fixing.
           </p>
-          <p className="site-seed">{seedUrl}</p>
-          <button className="primary" onClick={() => void onDiscover()}>
+          <ul className="feature-list">
+            <li>
+              <Icon name="check" size={13} /> Reads sitemap.xml, falls back to link crawling
+            </li>
+            <li>
+              <Icon name="check" size={13} /> Respects robots.txt and crawl-delay
+            </li>
+            <li>
+              <Icon name="check" size={13} /> Runs in the background — you can close the popup
+            </li>
+          </ul>
+          <p className="site-seed" title={seedUrl}>
+            {seedUrl}
+          </p>
+          <button className="btn primary block" onClick={() => void onDiscover()}>
+            <Icon name="sparkle" size={14} />
             Find pages
           </button>
         </section>
@@ -226,8 +228,11 @@ export function SiteAuditTab() {
 
       {phase === 'discovering' && (
         <section className="site-progress">
-          <p className="hint">{state?.note ?? 'Looking for pages…'}</p>
-          <button className="ghost" onClick={() => void send({ type: 'site:cancel' })}>
+          <p className="hint">
+            {state?.note ?? 'Looking for pages\u2026'}
+          </p>
+          <button className="btn subtle" onClick={() => void send({ type: 'site:cancel' })}>
+            <Icon name="stop" size={13} />
             Stop
           </button>
         </section>
@@ -236,17 +241,22 @@ export function SiteAuditTab() {
       {phase === 'ready' && state?.discovery && (
         <section className="site-select">
           <div className="site-summary">
-            <strong>{urls.length.toLocaleString('en-US')}</strong> pages found
-            <span className="site-source">
-              via {state.discovery.source === 'sitemap' ? 'sitemap' : state.discovery.source === 'crawl' ? 'link crawl' : 'sitemap + crawl'}
+            <div>
+              <span className="site-count">{urls.length.toLocaleString('en-US')}</span>
+              <span className="site-count-label">pages found</span>
+            </div>
+            <span className={`badge ${sourceTone(state.discovery.source)}`}>
+              {sourceLabel(state.discovery.source)}
             </span>
           </div>
+
           {state.discovery.notes.map((note) => (
             <p className="hint" key={note}>
-              {note}
+              <Icon name="info" size={12} /> {note}
             </p>
           ))}
 
+          <p className="field-label">How many pages to scan?</p>
           <div className="preset-row">
             {PRESETS.filter((preset) => preset < urls.length).map((preset) => (
               <button
@@ -260,35 +270,42 @@ export function SiteAuditTab() {
                 {preset}
               </button>
             ))}
-            <label className="custom">
+            <button
+              className={custom.trim() !== '' ? 'preset active' : 'preset'}
+              onClick={() => setCustom(String(Math.min(urls.length, 100)))}
+            >
               Custom
+            </button>
+            {custom.trim() !== '' && (
               <input
+                className="custom-input"
                 type="number"
                 min={1}
                 max={urls.length}
+                autoFocus
                 value={custom}
-                placeholder={String(urls.length)}
-                onChange={(event) => {
-                  setCustom(event.target.value)
-                  setSelected([])
-                }}
+                onChange={(event) => setCustom(event.target.value)}
               />
-            </label>
+            )}
           </div>
 
-          <input
-            className="search"
-            type="search"
-            placeholder="Filter pages…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <div className="search-wrap">
+            <Icon name="search" size={13} />
+            <input
+              className="search"
+              type="search"
+              placeholder="Filter pages\u2026"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <span className="search-count">{shown.length}</span>
+          </div>
 
           <ul className="url-list">
             {shown.map((entry) => {
-              const checked = custom === '' && selected.includes(entry.url)
+              const checked = custom.trim() === '' && selected.includes(entry.url)
               return (
-                <li key={entry.url}>
+                <li key={entry.url} className={checked ? 'url-row checked' : 'url-row'}>
                   <label>
                     <input
                       type="checkbox"
@@ -305,22 +322,32 @@ export function SiteAuditTab() {
                     <span className="url-text" title={entry.url}>
                       {entry.url.replace(/^https?:\/\//, '')}
                     </span>
-                    <span className={`tag ${entry.from}`}>{entry.from === 'sitemap' ? 'map' : `d${entry.depth}`}</span>
+                    <span className={`tag ${entry.from}`}>
+                      {entry.from === 'sitemap' ? 'map' : `d${entry.depth}`}
+                    </span>
                   </label>
                 </li>
               )
             })}
           </ul>
           {urls.length > shown.length && (
-            <p className="hint">Showing {shown.length} of {urls.length} — use the filter to narrow it down.</p>
+            <p className="hint">Showing {shown.length} of {urls.length}.</p>
           )}
 
-          <div className="site-actions">
-            <button className="primary" disabled={totalSelected === 0} onClick={() => void onScan(totalSelected)}>
-              Scan {totalSelected.toLocaleString('en-US')} pages
+          <div className="action-bar">
+            <span className="action-count">
+              {totalSelected.toLocaleString('en-US')} selected
+            </span>
+            <button
+              className="btn primary"
+              disabled={totalSelected === 0}
+              onClick={() => void onScan(totalSelected)}
+            >
+              <Icon name="play" size={12} />
+              Scan
             </button>
-            <button className="ghost" onClick={() => void onDiscover()}>
-              Re-discover
+            <button className="btn subtle icon-only" title="Re-discover pages" onClick={() => void onDiscover()}>
+              <Icon name="refresh" size={14} />
             </button>
           </div>
         </section>
@@ -328,21 +355,23 @@ export function SiteAuditTab() {
 
       {phase === 'scanning' && state && (
         <section className="site-progress">
-          <div className="progress-head">
-            <strong>
-              {state.scanned.toLocaleString('en-US')} / {state.queue.length.toLocaleString('en-US')}
-            </strong>
-            <span>{state.failed > 0 ? `${state.failed} failed` : 'pages scanned'}</span>
+          <ProgressRing done={state.scanned} total={state.queue.length} />
+          <div className="progress-meta">
+            <p className="progress-title">
+              {state.scanned.toLocaleString('en-US')} of{' '}
+              {state.queue.length.toLocaleString('en-US')} pages
+            </p>
+            <p className="hint">
+              {state.failed > 0 ? `${state.failed} could not be fetched \u00b7 ` : ''}
+              {state.currentUrls[0] ? `Now: ${shortUrl(state.currentUrls[0])}` : 'Starting\u2026'}
+            </p>
           </div>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${state.queue.length > 0 ? (state.scanned / state.queue.length) * 100 : 0}%` }}
-            />
-          </div>
-          {state.currentUrls.length > 0 && <p className="hint">Now: {state.currentUrls[0]}</p>}
-          <p className="hint">You can close this popup — the scan keeps running.</p>
-          <button className="ghost" onClick={() => void send({ type: 'site:cancel' })}>
+          <p className="notice">
+            <Icon name="info" size={13} />
+            <span>You can close this popup — the scan keeps running.</span>
+          </p>
+          <button className="btn subtle block" onClick={() => void send({ type: 'site:cancel' })}>
+            <Icon name="stop" size={13} />
             Stop scan
           </button>
         </section>
@@ -357,22 +386,82 @@ export function SiteAuditTab() {
         />
       )}
 
-      {phase === 'paused' && state && <p className="hint">Scan paused.</p>}
-
       {phase === 'error' && (
-        <section className="site-progress">
-          <p className="error" role="alert">
-            {state?.error ?? 'Something went wrong.'}
-          </p>
-          <button className="primary" onClick={() => void onDiscover()}>
-            Try again
-          </button>
-        </section>
-      )}
-
-      {phase === 'ready' && !state?.discovery && state?.results.length === 0 && (
-        <p className="hint">Nothing discovered yet.</p>
+        <EmptyState
+          icon="alert"
+          title="Discovery failed"
+          hint={state?.error ?? 'Something went wrong.'}
+          action={
+            <button className="btn primary" onClick={() => void onDiscover()}>
+              <Icon name="refresh" size={14} />
+              Try again
+            </button>
+          }
+        />
       )}
     </div>
   )
+}
+
+/**
+ * Asks the background for the current state, giving up after a short while so a
+ * dead/unregistered service worker shows a message instead of a spinner.
+ */
+async function handshake(origin: string): Promise<SiteScanState | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), HANDSHAKE_TIMEOUT_MS)
+  })
+
+  try {
+    const response = await Promise.race([
+      browser.runtime
+        .sendMessage({ type: 'site:getState', origin } satisfies SiteRequest)
+        .catch((error: unknown) => {
+          throw new Error(error instanceof Error ? error.message : String(error))
+        }),
+      timeout,
+    ])
+    return (response as SiteScanState | undefined) ?? null
+  } catch {
+    return null
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+function Stepper({ current }: { current: number }) {
+  return (
+    <ol className="stepper" aria-label="Progress">
+      {STEPS.map((label, index) => (
+        <li
+          key={label}
+          className={index === current ? 'step active' : index < current ? 'step done' : 'step'}
+        >
+          <span className="step-dot">{index < current ? <Icon name="check" size={10} /> : index + 1}</span>
+          <span className="step-label">{label}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function sourceLabel(source: string): string {
+  if (source === 'sitemap') return 'from sitemap'
+  if (source === 'crawl') return 'from link crawl'
+  return 'sitemap + crawl'
+}
+
+function sourceTone(source: string): string {
+  if (source === 'crawl') return 'warn'
+  return 'pass'
+}
+
+function shortUrl(url: string): string {
+  try {
+    const parsed = new URL(url)
+    return `${parsed.hostname}${parsed.pathname}`
+  } catch {
+    return url
+  }
 }

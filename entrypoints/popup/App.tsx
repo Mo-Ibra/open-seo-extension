@@ -5,11 +5,14 @@ import { runAudit } from '../../lib/audit'
 import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
-import { SerpPreview } from './SerpPreview'
+import { AuditSummary } from './AuditSummary'
+import { EmptyState } from './EmptyState'
 import { FindingCard } from './FindingCard'
+import { Icon, type IconName } from './Icon'
 import { LinksPanel } from './LinksPanel'
-import { SocialPanel } from './SocialPanel'
+import { SerpPreview } from './SerpPreview'
 import { SiteAuditTab } from './SiteAuditTab'
+import { SocialPanel } from './SocialPanel'
 
 type State =
   | { status: 'loading' }
@@ -18,11 +21,11 @@ type State =
 
 type Tab = 'audit' | 'links' | 'social' | 'site'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'audit', label: 'Audit' },
-  { id: 'links', label: 'Links' },
-  { id: 'social', label: 'Social' },
-  { id: 'site', label: 'Site' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'audit', label: 'Audit', icon: 'gauge' },
+  { id: 'links', label: 'Links', icon: 'link' },
+  { id: 'social', label: 'Social', icon: 'share' },
+  { id: 'site', label: 'Site', icon: 'globe' },
 ]
 
 export default function App() {
@@ -70,27 +73,31 @@ export default function App() {
     void scan()
   }, [scan])
 
+  const isPageTab = tab !== 'site'
+  const busy = state.status === 'loading'
+
   return (
     <div className="app">
       <header className="header">
         <span className="brand">
-          Open <b>SEO</b>
+          Open<b>SEO</b>
         </span>
-        <button className="rescan" onClick={() => void scan()} disabled={state.status === 'loading'}>
-          {state.status === 'loading' ? 'Scanning…' : 'Rescan'}
-        </button>
+        {isPageTab && (
+          <button
+            className="btn subtle icon-only"
+            onClick={() => void scan()}
+            disabled={busy}
+            title="Re-run the audit on this page"
+            aria-label="Re-run the audit"
+          >
+            <Icon name="refresh" size={14} className={busy ? 'spin' : undefined} />
+            {!busy && <span>Rescan</span>}
+          </button>
+        )}
       </header>
 
-      {state.status === 'loading' && <p className="hint">Reading the page…</p>}
-
-      {state.status === 'error' && (
-        <p className="error" role="alert">
-          {state.message}
-        </p>
-      )}
-
       <nav className="tabs" role="tablist">
-        {TABS.map(({ id, label }) => (
+        {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             role="tab"
@@ -98,31 +105,66 @@ export default function App() {
             className={tab === id ? 'tab active' : 'tab'}
             onClick={() => setTab(id)}
           >
-            {label}
+            <Icon name={icon} size={14} />
+            <span>{label}</span>
           </button>
         ))}
       </nav>
 
-      {state.status === 'ready' && tab !== 'site' && (
-        <>
-          {tab === 'audit' && (
-            <>
-              <SerpPreview page={state.page} />
-              <div className="findings">
-                {state.findings.map((finding) => (
-                  <FindingCard key={finding.id} finding={finding} />
-                ))}
-              </div>
-            </>
-          )}
-          {tab === 'links' && <LinksPanel page={state.page} />}
-          {tab === 'social' && <SocialPanel page={state.page} />}
-        </>
-      )}
+      <main className="content">
+        {state.status === 'loading' && <Skeleton />}
 
-      {tab === 'site' && <SiteAuditTab />}
+        {state.status === 'error' && isPageTab && (
+          <EmptyState
+            icon="alert"
+            title="This page cannot be audited"
+            hint={state.message}
+            action={
+              <button className="btn primary" onClick={() => void scan()}>
+                <Icon name="refresh" size={14} />
+                Try again
+              </button>
+            }
+          />
+        )}
 
-      <footer className="footer">Local-only audit · nothing leaves your browser</footer>
+        {state.status === 'ready' && isPageTab && (
+          <>
+            {tab === 'audit' && (
+              <>
+                <SerpPreview page={state.page} />
+                <AuditSummary findings={state.findings} />
+                <div className="findings">
+                  {state.findings.map((finding) => (
+                    <FindingCard key={finding.id} finding={finding} />
+                  ))}
+                </div>
+              </>
+            )}
+            {tab === 'links' && <LinksPanel page={state.page} />}
+            {tab === 'social' && <SocialPanel page={state.page} />}
+          </>
+        )}
+
+        {tab === 'site' && <SiteAuditTab />}
+      </main>
+
+      <footer className="footer">
+        <Icon name="info" size={12} />
+        <span>Local-only — nothing leaves your browser</span>
+      </footer>
+    </div>
+  )
+}
+
+/** Shown while the page is being read, so the popup never flashes empty. */
+function Skeleton() {
+  return (
+    <div className="skeleton" aria-hidden="true">
+      <div className="sk-block tall" />
+      <div className="sk-block" />
+      <div className="sk-block" />
+      <div className="sk-block short" />
     </div>
   )
 }
