@@ -2,25 +2,27 @@ import { useCallback, useEffect, useState } from 'react'
 import { browser } from 'wxt/browser'
 
 import { runAudit } from '../../lib/audit'
-import { extractPageData } from '../../lib/extract'
+import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { SerpPreview } from './SerpPreview'
 import { FindingCard } from './FindingCard'
 import { LinksPanel } from './LinksPanel'
 import { SocialPanel } from './SocialPanel'
+import { SiteAuditTab } from './SiteAuditTab'
 
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; page: PageData; findings: Finding[] }
 
-type Tab = 'audit' | 'links' | 'social'
+type Tab = 'audit' | 'links' | 'social' | 'site'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'audit', label: 'Audit' },
   { id: 'links', label: 'Links' },
   { id: 'social', label: 'Social' },
+  { id: 'site', label: 'Site' },
 ]
 
 export default function App() {
@@ -37,7 +39,7 @@ export default function App() {
 
       const [pageResult] = await browser.scripting.executeScript({
         target: { tabId: activeTab.id },
-        func: extractPageData,
+        func: extractFromDocument,
       })
 
       const page = pageResult?.result as PageData | undefined
@@ -87,22 +89,22 @@ export default function App() {
         </p>
       )}
 
-      {state.status === 'ready' && (
-        <>
-          <nav className="tabs" role="tablist">
-            {TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={tab === id}
-                className={tab === id ? 'tab active' : 'tab'}
-                onClick={() => setTab(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
+      <nav className="tabs" role="tablist">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            className={tab === id ? 'tab active' : 'tab'}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
 
+      {state.status === 'ready' && tab !== 'site' && (
+        <>
           {tab === 'audit' && (
             <>
               <SerpPreview page={state.page} />
@@ -115,10 +117,12 @@ export default function App() {
           )}
           {tab === 'links' && <LinksPanel page={state.page} />}
           {tab === 'social' && <SocialPanel page={state.page} />}
-
-          <footer className="footer">Local-only audit · nothing leaves your browser</footer>
         </>
       )}
+
+      {tab === 'site' && <SiteAuditTab />}
+
+      <footer className="footer">Local-only audit · nothing leaves your browser</footer>
     </div>
   )
 }

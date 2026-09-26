@@ -9,10 +9,20 @@ import type { SiteContext } from './types'
  * It must stay self-contained (no imports, no outer-scope references).
  */
 export async function extractSiteContext(): Promise<SiteContext> {
+  // Without a timeout a slow origin (or a hung connection) leaves the popup
+  // waiting forever, so every request here is bounded.
+  const withTimeout = (input: string): Promise<Response> => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
+    return fetch(input, { redirect: 'follow', signal: controller.signal }).finally(() =>
+      clearTimeout(timer)
+    )
+  }
+
   let robotsTxt: string | null = null
   let robotsTxtChecked = false
   try {
-    const response = await fetch(`${location.origin}/robots.txt`, { redirect: 'follow' })
+    const response = await withTimeout(`${location.origin}/robots.txt`)
     robotsTxtChecked = true
     if (response.ok) {
       robotsTxt = await response.text()
@@ -24,7 +34,7 @@ export async function extractSiteContext(): Promise<SiteContext> {
   let xRobotsTag: string | null = null
   let xRobotsTagChecked = false
   try {
-    const response = await fetch(location.href, { redirect: 'follow' })
+    const response = await withTimeout(location.href)
     xRobotsTagChecked = true
     xRobotsTag = response.headers.get('x-robots-tag')
     // Only the headers were needed; don't download the body.
