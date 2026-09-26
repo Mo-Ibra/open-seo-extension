@@ -3,6 +3,7 @@ import { browser } from 'wxt/browser'
 
 import { isPersistent, loadState } from '../../lib/crawl/store'
 import { createIdleState, type SiteEvent, type SiteRequest, type SiteScanState } from '../../lib/crawl/types'
+import { cn } from './cn'
 import { EmptyState } from './EmptyState'
 import { Icon } from './Icon'
 import { ProgressRing } from './ProgressRing'
@@ -153,7 +154,7 @@ export function SiteAuditTab() {
         title="No website to crawl"
         hint={loadError ?? 'Open a normal web page first — the crawler reads that site.'}
         action={
-          <button className="btn subtle" onClick={() => setAttempt((value) => value + 1)}>
+          <button className="btn border-line-strong bg-surface text-ink-soft hover:bg-surface-3" onClick={() => setAttempt((value) => value + 1)}>
             <Icon name="refresh" size={14} />
             Retry
           </button>
@@ -163,31 +164,37 @@ export function SiteAuditTab() {
   }
 
   const step =
-    phase === 'idle' || phase === 'loading' ? 0 : phase === 'ready' ? 1 : phase === 'scanning' || phase === 'discovering' ? 2 : 3
+    phase === 'idle' || phase === 'loading'
+      ? 0
+      : phase === 'ready'
+        ? 1
+        : phase === 'scanning' || phase === 'discovering'
+          ? 2
+          : 3
 
   return (
-    <div className="site">
+    <div className="flex flex-col gap-3">
       <Stepper current={step} />
 
       {permissionError && (
-        <p className="notice fail" role="alert">
+        <p className="flex items-center gap-1.5 rounded-sm bg-fail-soft px-2 py-1.5 text-xs text-fail" role="alert">
           <Icon name="alert" size={13} />
           <span>{permissionError}</span>
         </p>
       )}
 
       {loadError && (
-        <p className="notice warn" role="alert">
+        <p className="flex items-center gap-1.5 rounded-sm bg-warn-soft px-2 py-1.5 text-xs text-warn" role="alert">
           <Icon name="info" size={13} />
-          <span>{loadError}</span>
-          <button className="btn tiny" onClick={() => setAttempt((value) => value + 1)}>
+          <span className="flex-1">{loadError}</span>
+          <button className="btn px-2 py-1 text-[11px]" onClick={() => setAttempt((value) => value + 1)}>
             Retry
           </button>
         </p>
       )}
 
       {!isPersistent() && (
-        <p className="notice fail" role="alert">
+        <p className="flex items-center gap-1.5 rounded-sm bg-fail-soft px-2 py-1.5 text-xs text-fail" role="alert">
           <Icon name="alert" size={13} />
           <span>
             Scans cannot be saved: the <code>storage</code> permission is missing. Reload or reinstall
@@ -196,30 +203,33 @@ export function SiteAuditTab() {
         </p>
       )}
 
-      {phase === 'loading' && <div className="sk-block tall" />}
+      {phase === 'loading' && <div className="skeleton h-[84px] rounded-md" />}
 
       {phase === 'idle' && (
-        <section className="site-intro">
-          <h2 className="site-title">Audit a whole site</h2>
-          <p className="site-lead">
+        <section className="flex flex-col gap-2.5 rounded-lg border border-line bg-linear-to-b from-surface to-canvas px-4 py-4 shadow-soft">
+          <h2 className="text-[17px] tracking-tight">Audit a whole site</h2>
+          <p className="text-xs text-muted">
             Find every page, pick how many to scan, then get one report with everything that needs
             fixing.
           </p>
-          <ul className="feature-list">
-            <li>
-              <Icon name="check" size={13} /> Reads sitemap.xml, falls back to link crawling
+          <ul className="flex list-none flex-col gap-1 text-xs text-ink-soft">
+            <li className="flex items-center gap-1.5">
+              <Icon name="check" size={13} className="text-pass" />
+              Reads sitemap.xml, falls back to link crawling
             </li>
-            <li>
-              <Icon name="check" size={13} /> Respects robots.txt and crawl-delay
+            <li className="flex items-center gap-1.5">
+              <Icon name="check" size={13} className="text-pass" />
+              Respects robots.txt and crawl-delay
             </li>
-            <li>
-              <Icon name="check" size={13} /> Runs in the background — you can close the popup
+            <li className="flex items-center gap-1.5">
+              <Icon name="check" size={13} className="text-pass" />
+              Runs in the background — you can close the popup
             </li>
           </ul>
-          <p className="site-seed" title={seedUrl}>
+          <p className="truncate rounded-sm bg-surface-2 px-2 py-1.5 font-mono text-[11px] text-muted" title={seedUrl}>
             {seedUrl}
           </p>
-          <button className="btn primary block" onClick={() => void onDiscover()}>
+          <button className="btn w-full bg-accent text-accent-fg shadow-soft hover:brightness-105" onClick={() => void onDiscover()}>
             <Icon name="sparkle" size={14} />
             Find pages
           </button>
@@ -227,11 +237,9 @@ export function SiteAuditTab() {
       )}
 
       {phase === 'discovering' && (
-        <section className="site-progress">
-          <p className="hint">
-            {state?.note ?? 'Looking for pages\u2026'}
-          </p>
-          <button className="btn subtle" onClick={() => void send({ type: 'site:cancel' })}>
+        <section className="flex flex-col items-center gap-2.5 rounded-lg border border-line bg-surface px-3.5 py-5 text-center shadow-soft">
+          <p className="text-xs text-muted">{state?.note ?? 'Looking for pages\u2026'}</p>
+          <button className="btn border-line-strong bg-surface text-ink-soft hover:bg-surface-3" onClick={() => void send({ type: 'site:cancel' })}>
             <Icon name="stop" size={13} />
             Stop
           </button>
@@ -239,29 +247,42 @@ export function SiteAuditTab() {
       )}
 
       {phase === 'ready' && state?.discovery && (
-        <section className="site-select">
-          <div className="site-summary">
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 shadow-soft">
             <div>
-              <span className="site-count">{urls.length.toLocaleString('en-US')}</span>
-              <span className="site-count-label">pages found</span>
+              <span className="mr-1.5 text-2xl leading-none font-bold">
+                {urls.length.toLocaleString('en-US')}
+              </span>
+              <span className="text-xs text-muted">pages found</span>
             </div>
-            <span className={`badge ${sourceTone(state.discovery.source)}`}>
+            <span
+              className={cn(
+                'rounded-full px-1.5 py-px text-[10.5px] font-semibold',
+                state.discovery.source === 'crawl' ? 'bg-warn-soft text-warn' : 'bg-pass-soft text-pass'
+              )}
+            >
               {sourceLabel(state.discovery.source)}
             </span>
           </div>
 
           {state.discovery.notes.map((note) => (
-            <p className="hint" key={note}>
-              <Icon name="info" size={12} /> {note}
+            <p className="flex items-start gap-1.5 text-xs text-muted" key={note}>
+              <Icon name="info" size={12} className="mt-0.5" />
+              {note}
             </p>
           ))}
 
-          <p className="field-label">How many pages to scan?</p>
-          <div className="preset-row">
+          <p className="text-xs font-semibold text-ink-soft">How many pages to scan?</p>
+          <div className="flex flex-wrap items-center gap-1.5">
             {PRESETS.filter((preset) => preset < urls.length).map((preset) => (
               <button
                 key={preset}
-                className={totalSelected === preset ? 'preset active' : 'preset'}
+                className={cn(
+                  'cursor-pointer rounded-full border px-2.5 py-1.25 text-xs font-medium transition duration-150',
+                  totalSelected === preset
+                    ? 'border-accent bg-accent font-semibold text-accent-fg'
+                    : 'border-line-strong bg-surface text-ink-soft hover:border-accent hover:text-accent'
+                )}
                 onClick={() => {
                   setCustom('')
                   setSelected(urls.slice(0, preset).map((entry) => entry.url))
@@ -271,14 +292,19 @@ export function SiteAuditTab() {
               </button>
             ))}
             <button
-              className={custom.trim() !== '' ? 'preset active' : 'preset'}
+              className={cn(
+                'cursor-pointer rounded-full border px-2.5 py-1.25 text-xs font-medium transition duration-150',
+                custom.trim() !== ''
+                  ? 'border-accent bg-accent font-semibold text-accent-fg'
+                  : 'border-line-strong bg-surface text-ink-soft hover:border-accent hover:text-accent'
+              )}
               onClick={() => setCustom(String(Math.min(urls.length, 100)))}
             >
               Custom
             </button>
             {custom.trim() !== '' && (
               <input
-                className="custom-input"
+                className="w-16 rounded-full border border-accent bg-surface px-2 py-1.25 text-xs text-ink outline-none"
                 type="number"
                 min={1}
                 max={urls.length}
@@ -289,24 +315,30 @@ export function SiteAuditTab() {
             )}
           </div>
 
-          <div className="search-wrap">
+          <div className="flex items-center gap-1.5 rounded-sm border border-line bg-surface px-2 text-muted focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
             <Icon name="search" size={13} />
             <input
-              className="search"
+              className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-xs text-ink outline-none"
               type="search"
               placeholder="Filter pages\u2026"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            <span className="search-count">{shown.length}</span>
+            <span className="text-[11px]">{shown.length}</span>
           </div>
 
-          <ul className="url-list">
+          <ul className="max-h-[210px] list-none overflow-auto rounded-md border border-line bg-surface">
             {shown.map((entry) => {
               const checked = custom.trim() === '' && selected.includes(entry.url)
               return (
-                <li key={entry.url} className={checked ? 'url-row checked' : 'url-row'}>
-                  <label>
+                <li
+                  key={entry.url}
+                  className={cn(
+                    'border-b border-line transition-colors duration-150 last:border-b-0 hover:bg-surface-2',
+                    checked && 'bg-accent-soft'
+                  )}
+                >
+                  <label className="flex cursor-pointer items-center gap-1.5 px-2 py-1.25">
                     <input
                       type="checkbox"
                       checked={checked}
@@ -319,10 +351,13 @@ export function SiteAuditTab() {
                         )
                       }}
                     />
-                    <span className="url-text" title={entry.url}>
-                      {entry.url.replace(/^https?:\/\//, '')}
-                    </span>
-                    <span className={`tag ${entry.from}`}>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.url.replace(/^https?:\/\//, '')}</span>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded px-1 text-[9.5px] font-semibold',
+                        entry.from === 'sitemap' ? 'bg-pass-soft text-pass' : 'bg-surface-3 text-muted'
+                      )}
+                    >
                       {entry.from === 'sitemap' ? 'map' : `d${entry.depth}`}
                     </span>
                   </label>
@@ -331,22 +366,26 @@ export function SiteAuditTab() {
             })}
           </ul>
           {urls.length > shown.length && (
-            <p className="hint">Showing {shown.length} of {urls.length}.</p>
+            <p className="text-xs text-muted">Showing {shown.length} of {urls.length}.</p>
           )}
 
-          <div className="action-bar">
-            <span className="action-count">
+          <div className="sticky bottom-0 flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 shadow-lift">
+            <span className="flex-1 text-[11.5px] text-muted">
               {totalSelected.toLocaleString('en-US')} selected
             </span>
             <button
-              className="btn primary"
+              className="btn bg-accent text-accent-fg shadow-soft hover:brightness-105"
               disabled={totalSelected === 0}
               onClick={() => void onScan(totalSelected)}
             >
               <Icon name="play" size={12} />
               Scan
             </button>
-            <button className="btn subtle icon-only" title="Re-discover pages" onClick={() => void onDiscover()}>
+            <button
+              className="btn border-line-strong bg-surface px-2 text-ink-soft hover:bg-surface-3"
+              title="Re-discover pages"
+              onClick={() => void onDiscover()}
+            >
               <Icon name="refresh" size={14} />
             </button>
           </div>
@@ -354,23 +393,25 @@ export function SiteAuditTab() {
       )}
 
       {phase === 'scanning' && state && (
-        <section className="site-progress">
+        <section className="flex flex-col items-center gap-2.5 rounded-lg border border-line bg-surface px-3.5 py-5 text-center shadow-soft">
           <ProgressRing done={state.scanned} total={state.queue.length} />
-          <div className="progress-meta">
-            <p className="progress-title">
-              {state.scanned.toLocaleString('en-US')} of{' '}
-              {state.queue.length.toLocaleString('en-US')} pages
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-semibold">
+              {state.scanned.toLocaleString('en-US')} of {state.queue.length.toLocaleString('en-US')} pages
             </p>
-            <p className="hint">
-              {state.failed > 0 ? `${state.failed} could not be fetched \u00b7 ` : ''}
+            <p className="flex flex-wrap items-center justify-center gap-1 text-xs text-muted">
+              {state.failed > 0 && `${state.failed} could not be fetched \u00b7 `}
               {state.currentUrls[0] ? `Now: ${shortUrl(state.currentUrls[0])}` : 'Starting\u2026'}
             </p>
           </div>
-          <p className="notice">
+          <p className="flex items-center gap-1.5 rounded-sm bg-surface-2 px-2 py-1.5 text-xs text-ink-soft">
             <Icon name="info" size={13} />
             <span>You can close this popup — the scan keeps running.</span>
           </p>
-          <button className="btn subtle block" onClick={() => void send({ type: 'site:cancel' })}>
+          <button
+            className="btn w-full border-line-strong bg-surface text-ink-soft hover:bg-surface-3"
+            onClick={() => void send({ type: 'site:cancel' })}
+          >
             <Icon name="stop" size={13} />
             Stop scan
           </button>
@@ -392,7 +433,7 @@ export function SiteAuditTab() {
           title="Discovery failed"
           hint={state?.error ?? 'Something went wrong.'}
           action={
-            <button className="btn primary" onClick={() => void onDiscover()}>
+            <button className="btn bg-accent text-accent-fg shadow-soft hover:brightness-105" onClick={() => void onDiscover()}>
               <Icon name="refresh" size={14} />
               Try again
             </button>
@@ -432,14 +473,28 @@ async function handshake(origin: string): Promise<SiteScanState | null> {
 
 function Stepper({ current }: { current: number }) {
   return (
-    <ol className="stepper" aria-label="Progress">
+    <ol className="flex list-none items-center gap-0.5" aria-label="Progress">
       {STEPS.map((label, index) => (
         <li
           key={label}
-          className={index === current ? 'step active' : index < current ? 'step done' : 'step'}
+          className={cn(
+            'flex flex-1 items-center gap-1.25 text-[10.5px] font-semibold tracking-[0.05em] text-muted uppercase',
+            index === current && 'text-accent',
+            index < current && 'text-pass',
+            index < STEPS.length - 1 &&
+              "after:h-px after:flex-1 after:bg-line after:content-[''] after:my-1"
+          )}
         >
-          <span className="step-dot">{index < current ? <Icon name="check" size={10} /> : index + 1}</span>
-          <span className="step-label">{label}</span>
+          <span
+            className={cn(
+              'grid size-[18px] shrink-0 place-items-center rounded-full border bg-surface text-[10px]',
+              index === current && 'border-accent bg-accent-soft text-accent',
+              index < current && 'border-pass bg-pass-soft text-pass'
+            )}
+          >
+            {index < current ? <Icon name="check" size={10} /> : index + 1}
+          </span>
+          <span className="truncate">{label}</span>
         </li>
       ))}
     </ol>
@@ -450,11 +505,6 @@ function sourceLabel(source: string): string {
   if (source === 'sitemap') return 'from sitemap'
   if (source === 'crawl') return 'from link crawl'
   return 'sitemap + crawl'
-}
-
-function sourceTone(source: string): string {
-  if (source === 'crawl') return 'warn'
-  return 'pass'
 }
 
 function shortUrl(url: string): string {

@@ -7,11 +7,18 @@ export function ProgressRing({ done, total }: { done: number; total: number }) {
   const percent = total > 0 ? Math.min(100, (done / total) * 100) : 0
 
   return (
-    <div className="progress-ring" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} role="img" aria-label={`${Math.round(percent)}% complete`}>
-        <circle className="ring-track" cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} fill="none" />
         <circle
-          className="ring-value"
+          className="stroke-surface-3"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
+          fill="none"
+        />
+        <circle
+          className="stroke-accent transition-[stroke-dashoffset] duration-700 ease-out"
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -23,7 +30,9 @@ export function ProgressRing({ done, total }: { done: number; total: number }) {
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>
-      <span className="progress-percent">{Math.round(percent)}%</span>
+      <span className="absolute inset-0 grid place-items-center text-[13px] font-semibold">
+        {Math.round(percent)}%
+      </span>
     </div>
   )
 }

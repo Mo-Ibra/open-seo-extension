@@ -67,6 +67,9 @@ Load the unpacked build from `.output/chrome-mv3` via `chrome://extensions`
 ## Architecture
 
 - `entrypoints/popup/` — the React popup UI (Audit / Links / Social / Site tabs).
+  Styles are Tailwind CSS v4 utilities; the design tokens live in
+  `entrypoints/popup/popup.css` (`@theme`), which is also where the few
+  custom utilities (`btn`, `hide-marker`, `skeleton`) are defined.
 - `entrypoints/background.ts` — the site-audit job: discovery, the scan queue,
   persistence and progress broadcasts.
 - `lib/extract.ts` — one self-contained extractor. Injected into the live tab it

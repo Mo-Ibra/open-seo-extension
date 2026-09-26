@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import type { PageData } from '../../lib/types'
+import { cn } from './cn'
 import { Icon } from './Icon'
 
 function absolute(value: string | undefined, base: string): string | null {
@@ -51,9 +52,9 @@ export function SocialPanel({ page }: { page: PageData }) {
   const missing = fields.filter(([, value]) => !value).length
 
   return (
-    <div className="social-panel">
-      <section className="social-section">
-        <h3 className="section-title">Facebook / LinkedIn</h3>
+    <div className="flex flex-col gap-2.5">
+      <section className="flex flex-col gap-1.5">
+        <h3 className="text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">Facebook / LinkedIn</h3>
         <PreviewCard
           variant="large"
           image={image}
@@ -63,9 +64,12 @@ export function SocialPanel({ page }: { page: PageData }) {
         />
       </section>
 
-      <section className="social-section">
-        <h3 className="section-title">
-          X (Twitter) <span className="badge">{cardType}</span>
+      <section className="flex flex-col gap-1.5">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">
+          X (Twitter)
+          <span className="rounded-full bg-surface-3 px-1.5 py-px text-[10.5px] font-semibold text-muted">
+            {cardType}
+          </span>
         </h3>
         <PreviewCard
           variant={cardType === 'summary' ? 'compact' : 'large'}
@@ -76,17 +80,31 @@ export function SocialPanel({ page }: { page: PageData }) {
         />
       </section>
 
-      {image && <p className="hint">Image: {imageSize}</p>}
+      {image && <p className="flex items-center gap-1.5 text-xs text-muted">Image: {imageSize}</p>}
 
-      <section className="social-section">
-        <h3 className="section-title">
-          Tags <span className={missing > 0 ? 'badge warn' : 'badge pass'}>{missing} missing</span>
+      <section className="flex flex-col gap-1.5">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">
+          Tags
+          <span
+            className={cn(
+              'rounded-full px-1.5 py-px text-[10.5px] font-semibold',
+              missing > 0 ? 'bg-warn-soft text-warn' : 'bg-pass-soft text-pass'
+            )}
+          >
+            {missing} missing
+          </span>
         </h3>
-        <ul className="tag-list">
+        <ul className="list-none overflow-hidden rounded-md border border-line bg-surface">
           {fields.map(([name, value]) => (
-            <li className="tag-row" key={name}>
-              <span className="tag-name">{name}</span>
-              <span className={value ? 'tag-value' : 'tag-value missing'} title={value}>
+            <li className="flex gap-2 border-b border-line px-2 py-1.5 text-xs last:border-b-0" key={name}>
+              <span className="w-32 shrink-0 font-mono text-[11px] text-muted">{name}</span>
+              <span
+                className={cn(
+                  'min-w-0 flex-1 truncate',
+                  value ? undefined : 'text-fail italic'
+                )}
+                title={value}
+              >
                 {value || 'missing'}
               </span>
             </li>
@@ -114,26 +132,31 @@ function PreviewCard({
   const showImage = image && !imageFailed
 
   return (
-    <div className={variant === 'compact' ? 'social-card compact' : 'social-card'}>
-      <div className="social-media">
+    <div className={cn('overflow-hidden rounded-lg border border-line bg-surface shadow-soft', variant === 'compact' && 'flex')}>
+      <div className={cn('bg-surface-3', variant === 'compact' && 'w-[108px] shrink-0')}>
         {showImage ? (
           <img
-            className="social-image"
+            className={cn('block w-full object-cover', variant === 'compact' ? 'h-full' : 'max-h-[190px]')}
             src={image}
             alt=""
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="social-image-placeholder">
+          <div
+            className={cn(
+              'flex flex-col items-center justify-center gap-1.25 text-[11.5px] text-muted',
+              variant === 'compact' ? 'h-full min-h-[92px]' : 'h-[92px]'
+            )}
+          >
             <Icon name="sparkle" size={16} />
             <span>No og:image</span>
           </div>
         )}
       </div>
-      <div className="social-body">
-        <div className="social-domain">{siteName}</div>
-        <div className="social-title">{title || 'Untitled'}</div>
-        <div className="social-description">{description}</div>
+      <div className="p-2.5">
+        <div className="truncate text-[10.5px] tracking-[0.05em] text-muted uppercase">{siteName}</div>
+        <div className="my-0.75 line-clamp-2 text-sm leading-snug font-semibold">{title || 'Untitled'}</div>
+        <div className="line-clamp-2 text-xs text-muted">{description}</div>
       </div>
     </div>
   )

@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react'
 
 import type { LinkInfo, PageData } from '../../lib/types'
+import { cn } from './cn'
 import { EmptyState } from './EmptyState'
 import { Icon } from './Icon'
 
 type Kind = 'all' | 'internal' | 'external' | 'empty'
+
+const FILTERS: { id: Kind; label: (counts: Record<string, number>) => string }[] = [
+  { id: 'all', label: (c) => `All ${c.total}` },
+  { id: 'internal', label: (c) => `Internal ${c.internal}` },
+  { id: 'external', label: (c) => `External ${c.external}` },
+  { id: 'empty', label: (c) => `No text ${c.empty}` },
+]
 
 function isInternal(href: string, pageUrl: string): boolean {
   try {
@@ -41,12 +49,13 @@ export function LinksPanel({ page }: { page: PageData }) {
     const links = page.links.filter(isRealLink)
     const internal = links.filter((link) => isInternal(link.href, page.url))
     const external = links.filter((link) => !isInternal(link.href, page.url))
+    const empty = links.filter((link) => !link.text)
     return {
       total: links.length,
       unique: new Set(links.map((link) => link.href)).size,
       internal,
       external,
-      withoutText: links.filter((link) => !link.text).length,
+      empty,
     }
   }, [page])
 
@@ -58,7 +67,13 @@ export function LinksPanel({ page }: { page: PageData }) {
 
   const internal = groups.internal.filter(match)
   const external = groups.external.filter(match)
-  const empty = page.links.filter((link) => isRealLink(link) && !link.text).filter(match)
+  const empty = groups.empty.filter(match)
+  const counts = {
+    total: groups.total,
+    internal: groups.internal.length,
+    external: groups.external.length,
+    empty: groups.empty.length,
+  }
 
   const copy = async (href: string): Promise<void> => {
     try {
@@ -71,48 +86,45 @@ export function LinksPanel({ page }: { page: PageData }) {
   }
 
   return (
-    <div className="links-panel">
-      <div className="stats">
+    <div className="flex flex-col gap-2.5">
+      <div className="grid grid-cols-4 gap-1.5">
         <Stat label="Total" value={groups.total} />
         <Stat label="Unique" value={groups.unique} />
-        <Stat label="Internal" value={groups.internal.length} tone="accent" />
+        <Stat label="Internal" value={groups.internal.length} accent />
         <Stat label="External" value={groups.external.length} />
       </div>
 
-      {groups.withoutText > 0 && (
-        <p className="notice warn">
+      {groups.empty.length > 0 && (
+        <p className="flex items-center gap-1.5 rounded-sm bg-warn-soft px-2 py-1.5 text-xs text-warn">
           <Icon name="alert" size={13} />
           <span>
-            {groups.withoutText} link{groups.withoutText === 1 ? '' : 's'} without anchor text
+            {groups.empty.length} link{groups.empty.length === 1 ? '' : 's'} without anchor text
           </span>
         </p>
       )}
 
-      <div className="toolbar">
-        <div className="segmented" role="tablist" aria-label="Filter links">
-          {(
-            [
-              ['all', `All ${groups.total}`],
-              ['internal', `Internal ${groups.internal.length}`],
-              ['external', `External ${groups.external.length}`],
-              ['empty', `No text ${groups.withoutText}`],
-            ] as [Kind, string][]
-          ).map(([id, label]) => (
+      <div className="flex flex-col gap-1.5">
+        <div className="no-scrollbar flex gap-0.5 overflow-x-auto rounded-md border border-line bg-surface-2 p-0.5" role="tablist" aria-label="Filter links">
+          {FILTERS.map((option) => (
             <button
-              key={id}
+              key={option.id}
               role="tab"
-              aria-selected={kind === id}
-              className={kind === id ? 'seg-btn active' : 'seg-btn'}
-              onClick={() => setKind(id)}
+              aria-selected={kind === option.id}
+              className={cn(
+                'flex-1 cursor-pointer rounded-sm px-2 py-1.5 text-[11.5px] whitespace-nowrap transition-colors duration-150',
+                kind === option.id ? 'bg-surface font-semibold text-accent shadow-soft' : 'text-muted hover:text-ink'
+              )}
+              onClick={() => setKind(option.id)}
             >
-              {label}
+              {option.label(counts)}
             </button>
           ))}
         </div>
-        <div className="search-wrap">
+
+        <div className="flex items-center gap-1.5 rounded-sm border border-line bg-surface px-2 text-muted focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
           <Icon name="search" size={13} />
           <input
-            className="search"
+            className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-xs text-ink outline-none"
             type="search"
             placeholder="Filter links\u2026"
             value={query}
@@ -121,15 +133,9 @@ export function LinksPanel({ page }: { page: PageData }) {
         </div>
       </div>
 
-      {kind === 'internal' && (
-        <LinkSection title="Internal" links={internal} pageUrl={page.url} onCopy={copy} copied={copied} />
-      )}
-      {kind === 'external' && (
-        <LinkSection title="External" links={external} pageUrl={page.url} onCopy={copy} copied={copied} />
-      )}
-      {kind === 'empty' && (
-        <LinkSection title="Missing anchor text" links={empty} pageUrl={page.url} onCopy={copy} copied={copied} />
-      )}
+      {kind === 'internal' && <LinkSection title="Internal" links={internal} pageUrl={page.url} onCopy={copy} copied={copied} />}
+      {kind === 'external' && <LinkSection title="External" links={external} pageUrl={page.url} onCopy={copy} copied={copied} />}
+      {kind === 'empty' && <LinkSection title="Missing anchor text" links={empty} pageUrl={page.url} onCopy={copy} copied={copied} />}
       {kind === 'all' && (
         <>
           <LinkSection title="Internal" links={internal} pageUrl={page.url} onCopy={copy} copied={copied} />
@@ -138,17 +144,26 @@ export function LinksPanel({ page }: { page: PageData }) {
       )}
 
       {groups.total === 0 && (
-        <EmptyState icon="link" title="No links on this page" hint="Links found here will be listed with their anchor text." />
+        <EmptyState
+          icon="link"
+          title="No links on this page"
+          hint="Links found here will be listed with their anchor text."
+        />
       )}
     </div>
   )
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
+function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className={`stat ${tone ?? ''}`}>
-      <div className="stat-value">{value.toLocaleString('en-US')}</div>
-      <div className="stat-label">{label}</div>
+    <div
+      className={cn(
+        'rounded-md border bg-surface px-1 py-2 text-center shadow-soft',
+        accent ? 'border-accent bg-accent-soft' : 'border-line'
+      )}
+    >
+      <div className="text-[17px] leading-tight font-bold">{value.toLocaleString('en-US')}</div>
+      <div className="text-[10.5px] tracking-[0.05em] text-muted uppercase">{label}</div>
     </div>
   )
 }
@@ -169,21 +184,32 @@ function LinkSection({
   if (links.length === 0) return null
 
   return (
-    <section className="link-section">
-      <h3 className="section-title">
-        {title} <span className="badge">{links.length}</span>
+    <section className="flex flex-col gap-1.5">
+      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">
+        {title}
+        <span className="rounded-full bg-surface-3 px-1.5 py-px text-[10.5px] font-semibold text-muted">
+          {links.length}
+        </span>
       </h3>
-      <ul className="link-list">
+      <ul className="max-h-60 list-none overflow-auto rounded-md border border-line bg-surface">
         {links.map((link, index) => (
-          <li className="link-row" key={`${link.href}-${index}`}>
-            <span className="link-href" title={link.href}>
+          <li
+            className="group flex items-center gap-2 border-b border-line px-2 py-1.5 text-xs transition-colors duration-150 last:border-b-0 hover:bg-surface-2"
+            key={`${link.href}-${index}`}
+          >
+            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-accent" title={link.href}>
               {displayHref(link.href, pageUrl)}
             </span>
-            <span className={link.text ? 'link-text' : 'link-text empty'}>
+            <span
+              className={cn(
+                'max-w-[45%] shrink-0 truncate text-right text-muted',
+                !link.text && 'text-fail italic'
+              )}
+            >
               {link.text || 'No anchor text'}
             </span>
             <button
-              className="row-action"
+              className="grid size-[22px] shrink-0 cursor-pointer place-items-center rounded-sm border border-transparent bg-transparent text-muted opacity-0 transition hover:bg-surface-3 hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
               title="Copy URL"
               aria-label={`Copy ${link.href}`}
               onClick={() => void onCopy(link.href)}

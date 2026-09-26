@@ -1,4 +1,5 @@
 import type { PageData } from '../../lib/types'
+import { cn } from './cn'
 
 const TITLE_LIMIT = 60
 const DESCRIPTION_LIMIT = 160
@@ -21,13 +22,15 @@ export function SerpPreview({ page }: { page: PageData }) {
   const descriptionLength = page.description?.length ?? 0
 
   return (
-    <section className="serp" aria-label="Search result preview">
-      <header className="serp-head">
-        <span className="serp-badge">Search preview</span>
-        <span className="serp-host">{hostname(page.url)}</span>
+    <section className="rounded-lg border border-line bg-surface px-3 py-2.5 shadow-soft" aria-label="Search result preview">
+      <header className="mb-1.5 flex items-center gap-1.5">
+        <span className="rounded-full bg-surface-2 px-1.5 py-px text-[10px] font-semibold tracking-[0.05em] text-muted uppercase">
+          Search preview
+        </span>
+        <span className="truncate text-[11.5px] text-muted">{hostname(page.url)}</span>
       </header>
 
-      <div className="serp-title">
+      <div className="mb-1 text-[16px] leading-snug font-medium text-[#1a0dab] dark:text-[#8ab4f8]">
         {page.title ? truncate(page.title, TITLE_LIMIT) : 'No title'}
       </div>
       <Meter
@@ -37,7 +40,7 @@ export function SerpPreview({ page }: { page: PageData }) {
         tone={titleLength > TITLE_LIMIT ? 'fail' : titleLength < 20 ? 'warn' : 'pass'}
       />
 
-      <p className="serp-description">
+      <p className="mt-1.5 mb-1 text-xs text-ink-soft">
         {page.description
           ? truncate(page.description, DESCRIPTION_LIMIT)
           : 'No meta description — search engines will improvise one.'}
@@ -60,6 +63,8 @@ export function SerpPreview({ page }: { page: PageData }) {
   )
 }
 
+const FILL_TONE = { pass: 'bg-pass', warn: 'bg-warn', fail: 'bg-fail' } as const
+
 function Meter({
   label,
   value,
@@ -69,15 +74,18 @@ function Meter({
   label: string
   value: number
   limit: number
-  tone: string
+  tone: 'pass' | 'warn' | 'fail'
 }) {
   const width = Math.min(100, (value / limit) * 100)
   return (
-    <div className={`meter ${tone}`}>
-      <span className="meter-track">
-        <span className="meter-fill" style={{ width: `${width}%` }} />
+    <div className="mt-1.25 flex items-center gap-2">
+      <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-surface-3">
+        <span
+          className={cn('block h-full rounded-full transition-[width] duration-200', FILL_TONE[tone])}
+          style={{ width: `${width}%` }}
+        />
       </span>
-      <span className="meter-text">
+      <span className="text-[10.5px] whitespace-nowrap text-muted">
         {label} {value}/{limit}
       </span>
     </div>

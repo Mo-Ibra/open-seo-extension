@@ -1,7 +1,9 @@
 /**
- * Inline icon set (stroke-based, 16px grid, `currentColor`). Inline SVG keeps
+ * Inline icon set (stroke-based, 24px grid, `currentColor`). Inline SVG keeps
  * the extension fully offline — no icon font, no network request.
  */
+
+import { cn } from './cn'
 
 export type IconName =
   | 'gauge'
@@ -56,7 +58,7 @@ export function Icon({
   const filled = FILLED.includes(name)
   return (
     <svg
-      className={className ? `icon ${className}` : 'icon'}
+      className={cn('block shrink-0', className)}
       width={size}
       height={size}
       viewBox="0 0 24 24"

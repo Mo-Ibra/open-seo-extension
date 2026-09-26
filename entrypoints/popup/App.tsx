@@ -6,6 +6,7 @@ import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { AuditSummary } from './AuditSummary'
+import { cn } from './cn'
 import { EmptyState } from './EmptyState'
 import { FindingCard } from './FindingCard'
 import { Icon, type IconName } from './Icon'
@@ -77,32 +78,37 @@ export default function App() {
   const busy = state.status === 'loading'
 
   return (
-    <div className="app">
-      <header className="header">
-        <span className="brand">
-          Open<b>SEO</b>
+    <div className="flex h-[600px] w-[420px] flex-col bg-canvas">
+      <header className="sticky top-0 z-2 flex items-center justify-between gap-2 border-b border-line bg-linear-to-b from-surface to-canvas px-3 pt-2.5 pb-2">
+        <span className="text-sm font-medium tracking-tight">
+          Open<b className="font-bold text-accent">SEO</b>
         </span>
         {isPageTab && (
           <button
-            className="btn subtle icon-only"
+            className="btn border-line-strong bg-surface px-2 py-1.5 text-ink-soft hover:bg-surface-3"
             onClick={() => void scan()}
             disabled={busy}
             title="Re-run the audit on this page"
             aria-label="Re-run the audit"
           >
-            <Icon name="refresh" size={14} className={busy ? 'spin' : undefined} />
+            <Icon name="refresh" size={14} className={busy ? 'spin-slow' : undefined} />
             {!busy && <span>Rescan</span>}
           </button>
         )}
       </header>
 
-      <nav className="tabs" role="tablist">
+      <nav className="mx-3 mt-2.5 flex gap-0.5 rounded-md border border-line bg-surface-2 p-0.5" role="tablist">
         {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             role="tab"
             aria-selected={tab === id}
-            className={tab === id ? 'tab active' : 'tab'}
+            className={cn(
+              'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-sm px-1 py-1.5 text-xs transition-colors duration-150',
+              tab === id
+                ? 'bg-surface font-semibold text-accent shadow-soft'
+                : 'text-muted hover:text-ink'
+            )}
             onClick={() => setTab(id)}
           >
             <Icon name={icon} size={14} />
@@ -111,7 +117,7 @@ export default function App() {
         ))}
       </nav>
 
-      <main className="content">
+      <main className="flex flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-3 py-3">
         {state.status === 'loading' && <Skeleton />}
 
         {state.status === 'error' && isPageTab && (
@@ -120,7 +126,7 @@ export default function App() {
             title="This page cannot be audited"
             hint={state.message}
             action={
-              <button className="btn primary" onClick={() => void scan()}>
+              <button className="btn bg-accent text-accent-fg shadow-soft hover:brightness-105" onClick={() => void scan()}>
                 <Icon name="refresh" size={14} />
                 Try again
               </button>
@@ -134,7 +140,7 @@ export default function App() {
               <>
                 <SerpPreview page={state.page} />
                 <AuditSummary findings={state.findings} />
-                <div className="findings">
+                <div className="flex flex-col gap-1.5">
                   {state.findings.map((finding) => (
                     <FindingCard key={finding.id} finding={finding} />
                   ))}
@@ -149,7 +155,7 @@ export default function App() {
         {tab === 'site' && <SiteAuditTab />}
       </main>
 
-      <footer className="footer">
+      <footer className="flex items-center justify-center gap-1.5 border-t border-line bg-surface px-3 pt-2 pb-2.5 text-[11px] text-muted">
         <Icon name="info" size={12} />
         <span>Local-only — nothing leaves your browser</span>
       </footer>
@@ -160,11 +166,11 @@ export default function App() {
 /** Shown while the page is being read, so the popup never flashes empty. */
 function Skeleton() {
   return (
-    <div className="skeleton" aria-hidden="true">
-      <div className="sk-block tall" />
-      <div className="sk-block" />
-      <div className="sk-block" />
-      <div className="sk-block short" />
+    <div className="flex flex-col gap-2.5" aria-hidden="true">
+      <div className="skeleton h-[84px] rounded-md" />
+      <div className="skeleton h-[46px] rounded-md" />
+      <div className="skeleton h-[46px] rounded-md" />
+      <div className="skeleton h-8 w-[55%] rounded-md" />
     </div>
   )
 }

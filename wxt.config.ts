@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'wxt'
 
 const HOST_PATTERNS = ['http://*/*', 'https://*/*']
@@ -5,6 +6,11 @@ const HOST_PATTERNS = ['http://*/*', 'https://*/*']
 // Learn more: https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  vite: () => ({
+    // WXT bundles its own Vite copy, so @tailwindcss/vite's `Plugin` type is a
+    // different declaration of the same runtime object. Cast once, here.
+    plugins: [tailwindcss() as never],
+  }),
   manifest: (env) => ({
     name: 'Open SEO',
     short_name: 'Open SEO',
