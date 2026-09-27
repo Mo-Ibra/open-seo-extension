@@ -32,8 +32,20 @@ export interface PageData {
   social: SocialMeta
   headings: Heading[]
   links: LinkInfo[]
-  /** Total words in the page's visible text (scripts/styles excluded). */
+  /**
+   * Indexable words in the page's main content, including text that is hidden
+   * right now — behind a closed `<details>`, a `hidden` attribute, or an inline
+   * `display:none` panel. Visibility deliberately does not affect this number;
+   * see `lib/extract.ts`.
+   */
   wordCount: number
+  /**
+   * How many of `wordCount` a reader cannot see until they interact, i.e. text
+   * inside a closed accordion, a hidden panel or a stepper's inactive steps.
+   * Always `<= wordCount`. Reported separately so the audit can say "321 of 428
+   * words are behind a click" instead of quietly returning a smaller number.
+   */
+  hiddenWordCount: number
 }
 
 /** Open Graph and Twitter Card tags, keyed without their prefix. */

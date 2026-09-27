@@ -145,3 +145,40 @@ describe('crawl pipeline', () => {
     expect(reports.length).toBeLessThan(urls.length)
   })
 })
+
+/**
+ * The bug this covers: word count depended on render state, so a browser and
+ * the crawler returned different numbers for the same URL — a browser hid a
+ * closed `<details>` and a stepper's inactive panels, while `linkedom` (no
+ * layout engine) counted them. Counting from markup alone makes the two agree,
+ * and the hidden share is now a finding instead of a silently smaller total.
+ */
+describe('hidden content in a site scan', () => {
+  let faq: TestSite
+
+  beforeEach(async () => {
+    faq = await startSite({ disallow: ['/private'], accordionPage: '/faq' })
+  })
+
+  afterEach(async () => {
+    await faq.close()
+  })
+
+  it('counts accordion text and reports the hidden share', async () => {
+    const [result] = await scanUrls({
+      urls: [`${faq.origin}/faq`],
+      robotsTxt: null,
+      robotsChecked: false,
+      robotsAllowed: () => true,
+      concurrency: 1,
+      signal: new AbortController().signal,
+      onPage: () => {},
+      onProgress: () => {},
+    })
+
+    expect(result.ok).toBe(true)
+    // The FAQ alone is well over the threshold, so the page cannot be "thin".
+    expect(result.wordCount).toBeGreaterThan(300)
+    expect(result.findings.map((finding) => finding.id)).toContain('word-count-hidden')
+  })
+})
