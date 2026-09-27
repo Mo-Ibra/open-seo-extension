@@ -85,11 +85,35 @@ Load the unpacked build from `.output/chrome-mv3` via `chrome://extensions`
 - `lib/site-context.ts` — a second injected function that reads server-side
   signals (`robots.txt`, `X-Robots-Tag`) with same-origin requests.
 - `lib/audit.ts` — runs every check.
+- `lib/limits.ts` — the character budgets for `<title>` and
+  `<meta name="description">`, and the one grading function that turns a length
+  into a status. The checks, the SERP preview and the finding chips all read
+  from here, so they cannot disagree about the same string.
 - `lib/checks/` — one file per check. Adding a check is a small, self-contained
   PR.
 - `lib/crawl/` — the site crawler: `discover.ts` (sitemap → link crawl),
   `sitemap.ts`, `robots.ts`, `normalize.ts`, `http.ts`, `scan.ts`, `job.ts` (the
   scan state machine), `report.ts` (aggregation + export), `store.ts`.
+
+### Inside the popup
+
+The popup is split so that nothing is defined twice:
+
+- `tabs/<name>/` — one folder per tab, holding its screen and the components
+  only it uses. A helper used by one tab stays there; a helper used by two moves
+  down to `shared/`.
+- `shared/` — components with no tab-specific knowledge: `FilterTabs`,
+  `SearchInput`, `SectionTitle`, `Stepper`, `EmptyState`, `Icon`, `ProgressRing`.
+- `constants/` — `tone.ts` holds every pass/warn/fail class pair; `site.ts` holds
+  the site-tab tunables. Import from `'../constants'`, not the files directly.
+- `utils/` — pure display helpers (`url.ts`, `text.ts`, `format.ts`,
+  `download.ts`). Nothing here talks to the extension APIs.
+- `hooks/` — reusable React state, currently just `useCopyToClipboard`.
+
+Tailwind only emits class names it can see as literals, so the tone maps in
+`constants/tone.ts` must stay static strings; `tests/checks/tailwind-classes.test.ts`
+fails the build if a class is used but never generated.
+
 
 ## Tests
 

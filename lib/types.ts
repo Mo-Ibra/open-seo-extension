@@ -2,6 +2,8 @@
 // the inspected page. Keep this serializable — it crosses the page/extension
 // boundary.
 
+import type { LengthBudget } from './limits'
+
 export interface Heading {
   /** 1–6, corresponding to H1–H6. */
   level: number
@@ -61,6 +63,11 @@ export interface Finding {
   value: string | null
   /** Length of `value` in characters, when meaningful (e.g. titles). */
   length?: number
+  /**
+   * The length budget `length` should be measured against, when the check has
+   * one. Lets the UI grade the number it shows without re-deriving the limits.
+   */
+  budget?: LengthBudget
   status: Status
   /** What the check found. */
   message: string

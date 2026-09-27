@@ -1,13 +1,24 @@
+import {
+  DESCRIPTION_BUDGET,
+  TITLE_BUDGET,
+  lengthStatus,
+  type LengthBudget,
+} from '../../../../lib/limits'
 import type { PageData } from '../../../../lib/types'
-import { DESCRIPTION_LIMIT, FILL_TONE, TITLE_LIMIT } from '../../constants/constants'
+import { TONE, type Tone } from '../../constants/tone'
 import { cn } from '../../shared/cn'
-import { hostname, truncate } from './funcs'
+import { truncate } from '../../utils/text'
+import { hostname } from '../../utils/url'
 
-/** A rough preview of how the page's title/description may appear in search. */
+/**
+ * A rough preview of how the page's title and description may appear in search.
+ *
+ * Two length meters sit under the preview so the user can see *why* a field is
+ * flagged, and they are graded by the same budgets the audit checks use
+ * (`lib/limits.ts`) — otherwise this panel and the findings list could give
+ * opposite verdicts on the same string.
+ */
 export function SerpPreview({ page }: { page: PageData }) {
-  const titleLength = page.title.length
-  const descriptionLength = page.description?.length ?? 0
-
   return (
     <section className="rounded-lg border border-line bg-surface px-3 py-2.5 shadow-soft" aria-label="Search result preview">
       <header className="mb-1.5 flex items-center gap-1.5">
@@ -18,60 +29,63 @@ export function SerpPreview({ page }: { page: PageData }) {
       </header>
 
       <div className="mb-1 text-[16px] leading-snug font-medium text-[#1a0dab] dark:text-[#8ab4f8]">
-        {page.title ? truncate(page.title, TITLE_LIMIT) : 'No title'}
+        {page.title ? truncate(page.title, TITLE_BUDGET.max) : 'No title'}
       </div>
       <Meter
         label="title"
-        value={titleLength}
-        limit={TITLE_LIMIT}
-        tone={titleLength > TITLE_LIMIT ? 'fail' : titleLength < 20 ? 'warn' : 'pass'}
+        value={page.title}
+        budget={TITLE_BUDGET}
+        tone={lengthStatus(page.title, TITLE_BUDGET)}
       />
 
       <p className="mt-1.5 mb-1 text-xs text-ink-soft">
         {page.description
-          ? truncate(page.description, DESCRIPTION_LIMIT)
+          ? truncate(page.description, DESCRIPTION_BUDGET.max)
           : 'No meta description — search engines will improvise one.'}
       </p>
       <Meter
         label="description"
-        value={descriptionLength}
-        limit={DESCRIPTION_LIMIT}
-        tone={
-          descriptionLength === 0
-            ? 'fail'
-            : descriptionLength > DESCRIPTION_LIMIT
-              ? 'warn'
-              : descriptionLength < 70
-                ? 'warn'
-                : 'pass'
-        }
+        value={page.description}
+        budget={DESCRIPTION_BUDGET}
+        tone={lengthStatus(page.description, DESCRIPTION_BUDGET)}
       />
     </section>
   )
 }
 
+/**
+ * A progress bar for one metadata field: how full it is against its budget,
+ * tinted by the resulting status.
+ *
+ * The bar is drawn as a percentage of the budget's *maximum*, so a full bar
+ * means "at the limit" rather than "good" — an over-long title pins the bar at
+ * 100% and turns red-adjacent, which is the honest reading.
+ */
 function Meter({
   label,
   value,
-  limit,
+  budget,
   tone,
 }: {
   label: string
-  value: number
-  limit: number
-  tone: 'pass' | 'warn' | 'fail'
+  /** The raw field, or `null` when it is missing. */
+  value: string | null
+  budget: LengthBudget
+  tone: Tone
 }) {
-  const width = Math.min(100, (value / limit) * 100)
+  const length = value?.length ?? 0
+  const width = Math.min(100, (length / budget.max) * 100)
+
   return (
     <div className="mt-1.25 flex items-center gap-2">
       <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-surface-3">
         <span
-          className={cn('block h-full rounded-full transition-[width] duration-200', FILL_TONE[tone])}
+          className={cn('block h-full rounded-full transition-[width] duration-200', TONE.fill[tone])}
           style={{ width: `${width}%` }}
         />
       </span>
       <span className="text-[10.5px] whitespace-nowrap text-muted">
-        {label} {value}/{limit}
+        {label} {length}/{budget.max}
       </span>
     </div>
   )

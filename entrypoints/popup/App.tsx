@@ -6,27 +6,47 @@ import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { AuditTab } from './tabs/audit/AuditTab'
-import { EmptyState } from './shared/EmptyState'
-import { FindingCard } from './tabs/site/FindingCard'
-import { Icon } from './shared/Icon'
-import { LinksTab } from './tabs/links/LinksTab'
 import { SerpPreview } from './tabs/audit/SerpPreview'
+import { LinksTab } from './tabs/links/LinksTab'
+import { FindingCard } from './tabs/site/FindingCard'
 import { SiteTab } from './tabs/site/SiteTab'
 import { SocialTab } from './tabs/social/SocialTab'
-import Skeleton from './shared/Skeleton'
-import NavTabs, { Tab } from './shared/NavTabs'
-import Footer from './shared/Footer'
-import Header from './shared/Header'
+import { EmptyState } from './shared/EmptyState'
+import { Footer } from './shared/Footer'
+import { Header } from './shared/Header'
+import { Icon } from './shared/Icon'
+import { NavTabs, type Tab } from './shared/NavTabs'
+import { Skeleton } from './shared/Skeleton'
 
+/**
+ * What the page audit produced. A discriminated union rather than three
+ * `useState` calls, so "loading" and "ready" can never both be true.
+ */
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; page: PageData; findings: Finding[] }
 
+/**
+ * The popup shell: chrome, tab switching, and the page audit that three of the
+ * four tabs depend on.
+ *
+ * The site tab is independent of that audit — it talks to the background worker
+ * itself — so it renders regardless of the page's status, which is why the
+ * `isPageTab` guard wraps the loading/error/ready branches.
+ */
 export default function App() {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [tab, setTab] = useState<Tab>('audit')
 
+  /**
+   * Reads the active tab and runs the audit on it.
+   *
+   * `executeScript` with a function reference (rather than a file) is required
+   * here: the extractor has to run inside the page's own JS context, and the
+   * function is serialised, so it cannot close over anything from this module —
+   * it receives the document as its only argument.
+   */
   const scan = useCallback(async () => {
     setState({ status: 'loading' })
     try {
@@ -45,6 +65,8 @@ export default function App() {
         throw new Error('Could not read this page. Try reloading it.')
       }
 
+      // Second injected call: the response headers are not in the DOM, so they
+      // have to be fetched from the page to keep the request same-origin.
       const [contextResult] = await browser.scripting.executeScript({
         target: { tabId: activeTab.id },
         func: extractSiteContext,

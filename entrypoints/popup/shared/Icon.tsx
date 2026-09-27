@@ -21,7 +21,6 @@ export type IconName =
   | 'copy'
   | 'chevron'
   | 'sparkle'
-  | 'filter'
   | 'info'
 
 const PATHS: Record<IconName, string> = {
@@ -40,7 +39,6 @@ const PATHS: Record<IconName, string> = {
   copy: 'M9 9h9v11H9Z M6 15H4V4h11v2',
   chevron: 'M6 9.5 12 15.5 18 9.5',
   sparkle: 'M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8Z M18.5 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9Z',
-  filter: 'M4 6h16l-6 7v5l-4 2v-7Z',
   info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 11v5 M12 8v.5',
 }
 

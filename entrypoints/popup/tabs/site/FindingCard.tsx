@@ -1,27 +1,28 @@
+import { lengthStatus } from '../../../../lib/limits'
 import type { Finding } from '../../../../lib/types'
+import { NEUTRAL_CHIP, TONE, TONE_ICON } from '../../constants/tone'
 import { cn } from '../../shared/cn'
 import { Icon } from '../../shared/Icon'
 
-const STATUS_ICON = { pass: 'check', warn: 'alert', fail: 'close' } as const
-
-const STATUS_CARD = {
-  pass: 'border-l-pass',
-  warn: 'border-l-warn',
-  fail: 'border-l-fail',
-} as const
-
-const STATUS_BADGE = {
-  pass: 'bg-pass-soft text-pass',
-  warn: 'bg-warn-soft text-warn',
-  fail: 'bg-fail-soft text-fail',
-} as const
-
+/**
+ * A collapsible row describing one check result.
+ *
+ * Used both in the single-page audit list and inside each expanded page of the
+ * site report, which is why it takes nothing but the finding itself.
+ *
+ * Built on `<details>`/`<summary>` rather than a stateful button: the open/close
+ * behaviour, the keyboard handling and the "expands without JS" property all
+ * come from the platform.
+ */
 export function FindingCard({ finding }: { finding: Finding }) {
+  // Only length-bearing findings (title, description) get a character counter.
+  const hasLength = typeof finding.length === 'number'
+
   return (
     <details
       className={cn(
         'group rounded-md border border-line border-l-[3px] bg-surface shadow-soft transition-shadow duration-150 hover:shadow-lift',
-        STATUS_CARD[finding.status]
+        TONE.stripe[finding.status]
       )}
     >
       <summary
@@ -29,22 +30,14 @@ export function FindingCard({ finding }: { finding: Finding }) {
         aria-label={`${finding.label}: ${finding.status}`}
       >
         <span
-          className={cn(
-            'grid size-[17px] shrink-0 place-items-center rounded-full',
-            STATUS_BADGE[finding.status]
-          )}
+          className={cn('grid size-[17px] shrink-0 place-items-center rounded-full', TONE.icon[finding.status])}
           aria-hidden="true"
         >
-          <Icon name={STATUS_ICON[finding.status]} size={12} />
+          <Icon name={TONE_ICON[finding.status]} size={12} />
         </span>
         <span className="text-[12.5px] font-semibold">{finding.label}</span>
-        {typeof finding.length === 'number' && (
-          <span
-            className={cn(
-              'ml-auto rounded-full px-[7px] py-px text-[10.5px] font-semibold',
-              chipTone(finding)
-            )}
-          >
+        {hasLength && (
+          <span className={cn('ml-auto rounded-full px-[7px] py-px text-[10.5px] font-semibold', chipTone(finding))}>
             {finding.length} chars
           </span>
         )}
@@ -78,17 +71,16 @@ export function FindingCard({ finding }: { finding: Finding }) {
   )
 }
 
-const CHIP_TONE = {
-  pass: 'bg-pass-soft text-pass',
-  warn: 'bg-warn-soft text-warn',
-  fail: 'bg-fail-soft text-fail',
-} as const
-
-/** Title/description limits live around 50–60 and 120–160 characters. */
+/**
+ * Colours the "N chars" counter.
+ *
+ * The card's left stripe already states the check's verdict; the chip restates
+ * it as a tone so a 62-character title reads amber whether or not the user
+ * expands the row. The check attaches the field's own budget, so this never
+ * has to guess whether 60 characters is a long title or a short description.
+ * Findings without a budget get a neutral pill — there is nothing to grade.
+ */
 function chipTone(finding: Finding): string {
-  if (typeof finding.length !== 'number') return 'bg-surface-3 text-muted'
-  if (finding.length > 160) return CHIP_TONE.fail
-  if (finding.length > 70) return CHIP_TONE.warn
-  if (finding.length < 20) return CHIP_TONE.warn
-  return CHIP_TONE.pass
+  if (!finding.budget) return NEUTRAL_CHIP
+  return TONE.chip[lengthStatus(finding.value, finding.budget)]
 }

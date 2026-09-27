@@ -1,11 +1,8 @@
+import { aimHint, isTooLong, isTooShort, DESCRIPTION_BUDGET } from '../limits'
 import type { Check } from '../types'
 
-// Rough guidance based on search-result truncation, measured in characters.
-const MIN_LENGTH = 70
-const MAX_LENGTH = 160
-
 const LABEL = 'Meta description'
-const AIM = `Aim for ${MIN_LENGTH}\u2013${MAX_LENGTH} characters.`
+const AIM = aimHint(DESCRIPTION_BUDGET)
 
 export const descriptionCheck: Check = (page) => {
   const value = page.description || null
@@ -18,6 +15,7 @@ export const descriptionCheck: Check = (page) => {
         label: LABEL,
         value: null,
         length,
+        budget: DESCRIPTION_BUDGET,
         status: 'fail',
         message: 'Missing meta description.',
         fix: 'Add a concise summary with the page\u2019s main keywords and a call to action.',
@@ -25,13 +23,14 @@ export const descriptionCheck: Check = (page) => {
     ]
   }
 
-  if (length < MIN_LENGTH) {
+  if (isTooShort(value, DESCRIPTION_BUDGET)) {
     return [
       {
         id: 'description-too-short',
         label: LABEL,
         value,
         length,
+        budget: DESCRIPTION_BUDGET,
         status: 'warn',
         message: `Description is short (${length} characters). ${AIM}`,
         fix: 'Expand the description; make it compelling.',
@@ -39,13 +38,14 @@ export const descriptionCheck: Check = (page) => {
     ]
   }
 
-  if (length > MAX_LENGTH) {
+  if (isTooLong(value, DESCRIPTION_BUDGET)) {
     return [
       {
         id: 'description-too-long',
         label: LABEL,
         value,
         length,
+        budget: DESCRIPTION_BUDGET,
         status: 'warn',
         message: `Description is long (${length} characters) and may be truncated. ${AIM}`,
         fix: 'Shorten the description; keep the key message first.',

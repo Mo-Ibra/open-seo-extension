@@ -10,6 +10,15 @@ import { browser } from 'wxt/browser'
 
 import type { SiteEvent, SiteRequest, SiteScanState } from '../crawl/types'
 
+/**
+ * How long to wait for the worker to answer a state request before giving up.
+ *
+ * MV3 service workers are killed by the browser when idle, and a popup opened
+ * right after that has to wake it up again. Waking is usually fast, but if the
+ * worker is wedged we would rather show an error than spin forever.
+ */
+const HANDSHAKE_TIMEOUT_MS = 4000
+
 /** Sends a request to the worker. Resolves `null` if nothing answers. */
 export async function sendSiteRequest(request: SiteRequest): Promise<SiteScanState | null> {
   const response = await browser.runtime
@@ -17,6 +26,29 @@ export async function sendSiteRequest(request: SiteRequest): Promise<SiteScanSta
     .then((value) => (value as SiteScanState | undefined) ?? null)
     .catch(() => null)
   return response
+}
+
+/**
+ * Reads the live scan state from the worker, giving up after
+ * `HANDSHAKE_TIMEOUT_MS`.
+ *
+ * Distinct from `sendSiteRequest`, which never times out and so can hang the
+ * popup forever. This is the call the popup makes on open and on every retry:
+ * it always settles, with either the state or `null`.
+ */
+export async function getSiteStateWithTimeout(origin: string): Promise<SiteScanState | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), HANDSHAKE_TIMEOUT_MS)
+  })
+
+  try {
+    return await Promise.race([sendSiteRequest({ type: 'site:getState', origin }), timeout])
+  } finally {
+    // Clear the timer on the happy path too, otherwise the popup keeps a
+    // pending task alive for four seconds after every successful open.
+    if (timer) clearTimeout(timer)
+  }
 }
 
 /** Subscribes to state broadcasts. Returns an unsubscribe function. */

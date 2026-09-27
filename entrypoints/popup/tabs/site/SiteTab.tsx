@@ -1,29 +1,43 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { browser } from 'wxt/browser'
 
 import { isPersistent, loadState } from '../../../../lib/crawl/store'
-import { createIdleState, type SiteRequest, type SiteScanState } from '../../../../lib/crawl/types'
-import { onSiteState, sendSiteRequest } from '../../../../lib/platform/messaging'
+import {
+  createIdleState,
+  type DiscoverySource,
+  type SiteRequest,
+  type SiteScanState,
+} from '../../../../lib/crawl/types'
+import { getSiteStateWithTimeout, onSiteState, sendSiteRequest } from '../../../../lib/platform/messaging'
+import { DISCOVERY_SOURCE, SCAN_PRESETS, SCAN_STEPS, URL_LIST_LIMIT } from '../../constants/site'
+import { NEUTRAL_CHIP, TONE } from '../../constants/tone'
 import { cn } from '../../shared/cn'
 import { EmptyState } from '../../shared/EmptyState'
 import { Icon } from '../../shared/Icon'
 import { ProgressRing } from '../../shared/ProgressRing'
+import { SearchInput } from '../../shared/SearchInput'
+import { Stepper } from '../../shared/Stepper'
+import { formatCount } from '../../utils/format'
+import { stripScheme, shortUrl } from '../../utils/url'
+import { PHASE_MESSAGES, type Phase, stepForPhase } from './phase'
 import { ReportPanel } from './ReportPanel'
 
-const PRESETS = [10, 25, 50, 100, 250, 500]
-/** Checkbox list is capped so a 1000-URL site stays responsive. */
-const LIST_LIMIT = 200
-
-type Phase = 'loading' | 'unsupported' | SiteScanState['status']
-
-const STEPS = ['Discover', 'Choose', 'Scan', 'Report']
-
-/** The background must answer quickly; if it does not, say so instead of spinning. */
-const HANDSHAKE_TIMEOUT_MS = 4000
-
+/**
+ * Crawls and audits a whole site.
+ *
+ * This component owns the state machine and the messaging; the individual
+ * screens live inline below because each one is a single `phase` branch and
+ * splitting them into files would only move JSX around. The report — the one
+ * screen with real depth — is its own component.
+ *
+ * The load sequence matters and is deliberate: read the persisted state first so
+ * the last scan is on screen immediately, *then* ask the worker for the live
+ * state. Doing it the other way round would show a spinner on every open even
+ * when there is a report to show.
+ */
 export function SiteTab() {
   const [state, setState] = useState<SiteScanState | null>(null)
-  const [seedUrl, setSeedUrl] = useState<string>('')
+  const [seedUrl, setSeedUrl] = useState('')
   const [phase, setPhase] = useState<Phase>('loading')
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -31,7 +45,10 @@ export function SiteTab() {
   const [query, setQuery] = useState('')
   const [custom, setCustom] = useState('')
   const [openIssue, setOpenIssue] = useState<string | null>(null)
+  /** Bumped by the Retry buttons to re-run the load effect. */
   const [attempt, setAttempt] = useState(0)
+
+  const retry = useCallback(() => setAttempt((value) => value + 1), [])
 
   // Current page = seed site, plus whatever the background already knows.
   useEffect(() => {
@@ -57,16 +74,14 @@ export function SiteTab() {
         setPhase(saved?.status ?? 'idle')
 
         // 2) Then ask the background for the live state (it may be mid-scan).
-        const current = await handshake(origin)
+        const current = await getSiteStateWithTimeout(origin)
         if (current) {
           setState(current)
           setPhase(current.status)
           return
         }
 
-        setLoadError(
-          'The background worker did not respond. Reload the extension in chrome://extensions, then start the scan again.'
-        )
+        setLoadError(PHASE_MESSAGES.workerUnresponsive)
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : String(error))
         setPhase('unsupported')
@@ -75,12 +90,14 @@ export function SiteTab() {
     void load()
   }, [attempt])
 
-  // Background broadcasts the full state on every change.
+  // Background broadcasts the full state on every change, so the popup does
+  // not poll: this subscription is what makes progress advance live.
   useEffect(() => onSiteState((next) => {
     setState(next)
     setPhase(next.status)
   }), [])
 
+  /** Sends a request to the worker and adopts whatever state comes back. */
   const send = useCallback(async (request: SiteRequest): Promise<void> => {
     setPermissionError(null)
     const next = await sendSiteRequest(request)
@@ -90,21 +107,28 @@ export function SiteTab() {
       return
     }
     setPermissionError('The background worker did not respond.')
-    setLoadError(
-      'Could not talk to the background worker. Reload the extension in chrome://extensions, then try again.'
-    )
+    setLoadError(PHASE_MESSAGES.workerUnreachable)
   }, [])
 
   const urls = useMemo(() => state?.discovery?.urls ?? [], [state])
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const filtered = needle ? urls.filter((entry) => entry.url.toLowerCase().includes(needle)) : urls
-    return filtered.slice(0, LIST_LIMIT)
+    return filtered.slice(0, URL_LIST_LIMIT)
   }, [urls, query])
 
+  // Typing a custom count overrides the checkbox list, which is why the two are
+  // mutually exclusive and why `selected` is ignored while `custom` is set.
   const totalSelected =
     custom.trim() === '' ? selected.length : Math.min(urls.length, Number(custom) || 0)
 
+  /**
+   * Requests host permission for the seed origin, returning whether we have it.
+   *
+   * Optional host permissions can only be requested from a user gesture, so this
+   * must run synchronously enough after a click; every crawl action calls it
+   * first and bails out when it returns false.
+   */
   const ensurePermission = useCallback(async (): Promise<boolean> => {
     const origin = new URL(seedUrl).origin
     const pattern = `${origin}/*`
@@ -126,6 +150,7 @@ export function SiteTab() {
   const onScan = useCallback(
     async (count: number): Promise<void> => {
       if (!(await ensurePermission())) return
+      // A preset means "the first N"; otherwise use the hand-picked checkboxes.
       const chosen = count > 0 ? urls.slice(0, count).map((entry) => entry.url) : selected
       if (chosen.length === 0) return
       setPhase('scanning')
@@ -139,9 +164,9 @@ export function SiteTab() {
       <EmptyState
         icon="globe"
         title="No website to crawl"
-        hint={loadError ?? 'Open a normal web page first — the crawler reads that site.'}
+        hint={loadError ?? PHASE_MESSAGES.unsupported}
         action={
-          <button className="btn border-line-strong bg-surface text-ink-soft hover:bg-surface-3" onClick={() => setAttempt((value) => value + 1)}>
+          <button className="btn border-line-strong bg-surface text-ink-soft hover:bg-surface-3" onClick={retry}>
             <Icon name="refresh" size={14} />
             Retry
           </button>
@@ -150,44 +175,31 @@ export function SiteTab() {
     )
   }
 
-  const step =
-    phase === 'idle' || phase === 'loading'
-      ? 0
-      : phase === 'ready'
-        ? 1
-        : phase === 'scanning' || phase === 'discovering'
-          ? 2
-          : 3
-
   return (
     <div className="flex flex-col gap-3">
-      <Stepper current={step} />
+      <Stepper steps={SCAN_STEPS} current={stepForPhase(phase)} />
 
-      {permissionError && (
-        <p className="flex items-center gap-1.5 rounded-sm bg-fail-soft px-2 py-1.5 text-xs text-fail" role="alert">
-          <Icon name="alert" size={13} />
-          <span>{permissionError}</span>
-        </p>
-      )}
+      {permissionError && <Alert tone="fail" icon="alert">{permissionError}</Alert>}
 
       {loadError && (
-        <p className="flex items-center gap-1.5 rounded-sm bg-warn-soft px-2 py-1.5 text-xs text-warn" role="alert">
-          <Icon name="info" size={13} />
-          <span className="flex-1">{loadError}</span>
-          <button className="btn px-2 py-1 text-[11px]" onClick={() => setAttempt((value) => value + 1)}>
-            Retry
-          </button>
-        </p>
+        <Alert
+          tone="warn"
+          icon="info"
+          action={
+            <button className="btn shrink-0 px-2 py-1 text-[11px]" onClick={retry}>
+              Retry
+            </button>
+          }
+        >
+          {loadError}
+        </Alert>
       )}
 
       {!isPersistent() && (
-        <p className="flex items-center gap-1.5 rounded-sm bg-fail-soft px-2 py-1.5 text-xs text-fail" role="alert">
-          <Icon name="alert" size={13} />
-          <span>
-            Scans cannot be saved: the <code>storage</code> permission is missing. Reload or reinstall
-            the extension from <code>.output/chrome-mv3</code>.
-          </span>
-        </p>
+        <Alert tone="fail" icon="alert">
+          Scans cannot be saved: the <code>storage</code> permission is missing. Reload or reinstall
+          the extension from <code>.output/chrome-mv3</code>.
+        </Alert>
       )}
 
       {phase === 'loading' && <div className="skeleton h-[84px] rounded-md" />}
@@ -200,18 +212,9 @@ export function SiteTab() {
             fixing.
           </p>
           <ul className="flex list-none flex-col gap-1 text-xs text-ink-soft">
-            <li className="flex items-center gap-1.5">
-              <Icon name="check" size={13} className="text-pass" />
-              Reads sitemap.xml, falls back to link crawling
-            </li>
-            <li className="flex items-center gap-1.5">
-              <Icon name="check" size={13} className="text-pass" />
-              Respects robots.txt and crawl-delay
-            </li>
-            <li className="flex items-center gap-1.5">
-              <Icon name="check" size={13} className="text-pass" />
-              Runs in the background — you can close the popup
-            </li>
+            <Bullet>Reads sitemap.xml, falls back to link crawling</Bullet>
+            <Bullet>Respects robots.txt and crawl-delay</Bullet>
+            <Bullet>Runs in the background — you can close the popup</Bullet>
           </ul>
           <p className="truncate rounded-sm bg-surface-2 px-2 py-1.5 font-mono text-[11px] text-muted" title={seedUrl}>
             {seedUrl}
@@ -238,18 +241,11 @@ export function SiteTab() {
           <div className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 shadow-soft">
             <div>
               <span className="mr-1.5 text-2xl leading-none font-bold">
-                {urls.length.toLocaleString('en-US')}
+                {formatCount(urls.length)}
               </span>
               <span className="text-xs text-muted">pages found</span>
             </div>
-            <span
-              className={cn(
-                'rounded-full px-1.5 py-px text-[10.5px] font-semibold',
-                state.discovery.source === 'crawl' ? 'bg-warn-soft text-warn' : 'bg-pass-soft text-pass'
-              )}
-            >
-              {sourceLabel(state.discovery.source)}
-            </span>
+            <SourcePill source={state.discovery.source} />
           </div>
 
           {state.discovery.notes.map((note) => (
@@ -261,15 +257,11 @@ export function SiteTab() {
 
           <p className="text-xs font-semibold text-ink-soft">How many pages to scan?</p>
           <div className="flex flex-wrap items-center gap-1.5">
-            {PRESETS.filter((preset) => preset < urls.length).map((preset) => (
+            {/* Presets larger than the site are pointless, so they are hidden. */}
+            {SCAN_PRESETS.filter((preset) => preset < urls.length).map((preset) => (
               <button
                 key={preset}
-                className={cn(
-                  'cursor-pointer rounded-full border px-2.5 py-1.25 text-xs font-medium transition duration-150',
-                  totalSelected === preset
-                    ? 'border-accent bg-accent font-semibold text-accent-fg'
-                    : 'border-line-strong bg-surface text-ink-soft hover:border-accent hover:text-accent'
-                )}
+                className={cn(PRESET_CLASS, totalSelected === preset && PRESET_CLASS_ACTIVE)}
                 onClick={() => {
                   setCustom('')
                   setSelected(urls.slice(0, preset).map((entry) => entry.url))
@@ -279,12 +271,7 @@ export function SiteTab() {
               </button>
             ))}
             <button
-              className={cn(
-                'cursor-pointer rounded-full border px-2.5 py-1.25 text-xs font-medium transition duration-150',
-                custom.trim() !== ''
-                  ? 'border-accent bg-accent font-semibold text-accent-fg'
-                  : 'border-line-strong bg-surface text-ink-soft hover:border-accent hover:text-accent'
-              )}
+              className={cn(PRESET_CLASS, custom.trim() !== '' && PRESET_CLASS_ACTIVE)}
               onClick={() => setCustom(String(Math.min(urls.length, 100)))}
             >
               Custom
@@ -302,17 +289,12 @@ export function SiteTab() {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-sm border border-line bg-surface px-2 text-muted focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-soft">
-            <Icon name="search" size={13} />
-            <input
-              className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-xs text-ink outline-none"
-              type="search"
-              placeholder="Filter pages\u2026"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <span className="text-[11px]">{shown.length}</span>
-          </div>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Filter pages…"
+            count={shown.length}
+          />
 
           <ul className="max-h-[210px] list-none overflow-auto rounded-md border border-line bg-surface">
             {shown.map((entry) => {
@@ -338,11 +320,11 @@ export function SiteTab() {
                         )
                       }}
                     />
-                    <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.url.replace(/^https?:\/\//, '')}</span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{stripScheme(entry.url)}</span>
                     <span
                       className={cn(
                         'shrink-0 rounded px-1 text-[9.5px] font-semibold',
-                        entry.from === 'sitemap' ? 'bg-pass-soft text-pass' : 'bg-surface-3 text-muted'
+                        entry.from === 'sitemap' ? TONE.chip.pass : NEUTRAL_CHIP
                       )}
                     >
                       {entry.from === 'sitemap' ? 'map' : `d${entry.depth}`}
@@ -353,12 +335,12 @@ export function SiteTab() {
             })}
           </ul>
           {urls.length > shown.length && (
-            <p className="text-xs text-muted">Showing {shown.length} of {urls.length}.</p>
+            <p className="text-xs text-muted">Showing {formatCount(shown.length)} of {formatCount(urls.length)}.</p>
           )}
 
           <div className="sticky bottom-0 flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 shadow-lift">
             <span className="flex-1 text-[11.5px] text-muted">
-              {totalSelected.toLocaleString('en-US')} selected
+              {formatCount(totalSelected)} selected
             </span>
             <button
               className="btn bg-accent text-accent-fg shadow-soft hover:brightness-105"
@@ -384,7 +366,7 @@ export function SiteTab() {
           <ProgressRing done={state.scanned} total={state.queue.length} />
           <div className="flex flex-col gap-0.5">
             <p className="text-sm font-semibold">
-              {state.scanned.toLocaleString('en-US')} of {state.queue.length.toLocaleString('en-US')} pages
+              {formatCount(state.scanned)} of {formatCount(state.queue.length)} pages
             </p>
             <p className="flex flex-wrap items-center justify-center gap-1 text-xs text-muted">
               {state.failed > 0 && `${state.failed} could not be fetched \u00b7 `}
@@ -431,64 +413,46 @@ export function SiteTab() {
   )
 }
 
-/**
- * Asks the background for the current state, giving up after a short while so a
- * dead/unregistered service worker shows a message instead of a spinner.
- */
-async function handshake(origin: string): Promise<SiteScanState | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), HANDSHAKE_TIMEOUT_MS)
-  })
+/** Shared base class for the "how many pages" pills, so active/inactive match. */
+const PRESET_CLASS =
+  'cursor-pointer rounded-full border border-line-strong bg-surface px-2.5 py-1.25 text-xs font-medium text-ink-soft transition duration-150 hover:border-accent hover:text-accent'
 
-  try {
-    return await Promise.race([sendSiteRequest({ type: 'site:getState', origin }), timeout])
-  } finally {
-    if (timer) clearTimeout(timer)
-  }
-}
+/** The selected state, layered on top of `PRESET_CLASS`. */
+const PRESET_CLASS_ACTIVE = 'border-accent bg-accent font-semibold text-accent-fg'
 
-function Stepper({ current }: { current: number }) {
+/** An inline notice above the current screen, optionally with a Retry button. */
+function Alert({
+  tone,
+  icon,
+  action,
+  children,
+}: {
+  tone: 'warn' | 'fail'
+  icon: 'alert' | 'info'
+  action?: ReactNode
+  children: ReactNode
+}) {
   return (
-    <ol className="flex list-none items-center gap-0.5" aria-label="Progress">
-      {STEPS.map((label, index) => (
-        <li
-          key={label}
-          className={cn(
-            'flex flex-1 items-center gap-1.25 text-[10.5px] font-semibold tracking-[0.05em] text-muted uppercase',
-            index === current && 'text-accent',
-            index < current && 'text-pass',
-            index < STEPS.length - 1 &&
-              "after:h-px after:flex-1 after:bg-line after:content-[''] after:my-1"
-          )}
-        >
-          <span
-            className={cn(
-              'grid size-[18px] shrink-0 place-items-center rounded-full border bg-surface text-[10px]',
-              index === current && 'border-accent bg-accent-soft text-accent',
-              index < current && 'border-pass bg-pass-soft text-pass'
-            )}
-          >
-            {index < current ? <Icon name="check" size={10} /> : index + 1}
-          </span>
-          <span className="truncate">{label}</span>
-        </li>
-      ))}
-    </ol>
+    <p className={cn('flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs', TONE.chip[tone])} role="alert">
+      <Icon name={icon} size={13} />
+      <span className="flex-1">{children}</span>
+      {action}
+    </p>
   )
 }
 
-function sourceLabel(source: string): string {
-  if (source === 'sitemap') return 'from sitemap'
-  if (source === 'crawl') return 'from link crawl'
-  return 'sitemap + crawl'
+/** One "what this does" line in the idle screen's feature list. */
+function Bullet({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex items-center gap-1.5">
+      <Icon name="check" size={13} className="text-pass" />
+      {children}
+    </li>
+  )
 }
 
-function shortUrl(url: string): string {
-  try {
-    const parsed = new URL(url)
-    return `${parsed.hostname}${parsed.pathname}`
-  } catch {
-    return url
-  }
+/** Where the page list came from: sitemap, crawl, or both. */
+function SourcePill({ source }: { source: DiscoverySource }) {
+  const { label, tone } = DISCOVERY_SOURCE[source]
+  return <span className={cn('rounded-full px-1.5 py-px text-[10.5px] font-semibold', TONE.chip[tone])}>{label}</span>
 }
