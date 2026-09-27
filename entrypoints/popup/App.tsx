@@ -6,7 +6,6 @@ import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { AuditSummary } from './AuditSummary'
-import { cn } from './cn'
 import { EmptyState } from './EmptyState'
 import { FindingCard } from './FindingCard'
 import { Icon, type IconName } from './Icon'
@@ -14,20 +13,15 @@ import { LinksPanel } from './LinksPanel'
 import { SerpPreview } from './SerpPreview'
 import { SiteAuditTab } from './SiteAuditTab'
 import { SocialPanel } from './SocialPanel'
+import Skeleton from './Skeleton'
+import NavTabs, { Tab } from './NavTabs'
+import Footer from './Footer'
+import Header from './Header'
 
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; page: PageData; findings: Finding[] }
-
-type Tab = 'audit' | 'links' | 'social' | 'site'
-
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: 'audit', label: 'Audit', icon: 'gauge' },
-  { id: 'links', label: 'Links', icon: 'link' },
-  { id: 'social', label: 'Social', icon: 'share' },
-  { id: 'site', label: 'Site', icon: 'globe' },
-]
 
 export default function App() {
   const [state, setState] = useState<State>({ status: 'loading' })
@@ -79,43 +73,9 @@ export default function App() {
 
   return (
     <div className="flex h-[600px] w-[420px] flex-col bg-canvas">
-      <header className="sticky top-0 z-2 flex items-center justify-between gap-2 border-b border-line bg-linear-to-b from-surface to-canvas px-3 pt-2.5 pb-2">
-        <span className="text-sm font-medium tracking-tight">
-          Open<b className="font-bold text-accent">SEO</b>
-        </span>
-        {isPageTab && (
-          <button
-            className="btn border-line-strong bg-surface px-2 py-1.5 text-ink-soft hover:bg-surface-3"
-            onClick={() => void scan()}
-            disabled={busy}
-            title="Re-run the audit on this page"
-            aria-label="Re-run the audit"
-          >
-            <Icon name="refresh" size={14} className={busy ? 'spin-slow' : undefined} />
-            {!busy && <span>Rescan</span>}
-          </button>
-        )}
-      </header>
+      <Header isPageTab={isPageTab} scan={scan} busy={busy} />
 
-      <nav className="mx-3 mt-2.5 flex gap-0.5 rounded-md border border-line bg-surface-2 p-0.5" role="tablist">
-        {TABS.map(({ id, label, icon }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            className={cn(
-              'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-sm px-1 py-1.5 text-xs transition-colors duration-150',
-              tab === id
-                ? 'bg-surface font-semibold text-accent shadow-soft'
-                : 'text-muted hover:text-ink'
-            )}
-            onClick={() => setTab(id)}
-          >
-            <Icon name={icon} size={14} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
+      <NavTabs tab={tab} setTab={setTab} />
 
       <main className="flex flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-3 py-3">
         {state.status === 'loading' && <Skeleton />}
@@ -155,22 +115,7 @@ export default function App() {
         {tab === 'site' && <SiteAuditTab />}
       </main>
 
-      <footer className="flex items-center justify-center gap-1.5 border-t border-line bg-surface px-3 pt-2 pb-2.5 text-[11px] text-muted">
-        <Icon name="info" size={12} />
-        <span>Local-only — nothing leaves your browser</span>
-      </footer>
-    </div>
-  )
-}
-
-/** Shown while the page is being read, so the popup never flashes empty. */
-function Skeleton() {
-  return (
-    <div className="flex flex-col gap-2.5" aria-hidden="true">
-      <div className="skeleton h-[84px] rounded-md" />
-      <div className="skeleton h-[46px] rounded-md" />
-      <div className="skeleton h-[46px] rounded-md" />
-      <div className="skeleton h-8 w-[55%] rounded-md" />
+      <Footer />
     </div>
   )
 }
