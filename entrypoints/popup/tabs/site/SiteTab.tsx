@@ -9,7 +9,7 @@ import {
   type SiteScanState,
 } from '../../../../lib/crawl/types'
 import { getSiteStateWithTimeout, onSiteState, sendSiteRequest } from '../../../../lib/platform/messaging'
-import { DISCOVERY_SOURCE, SCAN_PRESETS, SCAN_STEPS, URL_LIST_LIMIT } from '../../constants/site'
+import { DISCOVERY_SOURCE, SCAN_PRESETS, SCAN_STEPS, URL_PAGE_SIZE } from '../../constants/site'
 import { NEUTRAL_CHIP, TONE } from '../../constants/tone'
 import { cn } from '../../shared/cn'
 import { EmptyState } from '../../shared/EmptyState'
@@ -18,7 +18,9 @@ import { ProgressRing } from '../../shared/ProgressRing'
 import { SearchInput } from '../../shared/SearchInput'
 import { Stepper } from '../../shared/Stepper'
 import { formatCount } from '../../utils/format'
+import { paginate } from '../../utils/paginate'
 import { stripScheme, shortUrl } from '../../utils/url'
+import { Pagination } from './Pagination'
 import { PHASE_MESSAGES, type Phase, stepForPhase } from './phase'
 import { ReportPanel } from './ReportPanel'
 
@@ -45,6 +47,9 @@ export function SiteTab() {
   const [query, setQuery] = useState('')
   const [custom, setCustom] = useState('')
   const [openIssue, setOpenIssue] = useState<string | null>(null)
+  /** Zero-based page of the URL picker. Clamped on read, never trusted on write. */
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState<number>(URL_PAGE_SIZE)
   /** Bumped by the Retry buttons to re-run the load effect. */
   const [attempt, setAttempt] = useState(0)
 
@@ -111,11 +116,43 @@ export function SiteTab() {
   }, [])
 
   const urls = useMemo(() => state?.discovery?.urls ?? [], [state])
-  const shown = useMemo(() => {
+
+  /**
+   * URLs matching the search box, unpaged.
+   *
+   * Pagination is a view concern layered on top of this, so the search and the
+   * pages stay independent: searching never discards selections, and paging
+   * never re-filters.
+   */
+  const matches = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    const filtered = needle ? urls.filter((entry) => entry.url.toLowerCase().includes(needle)) : urls
-    return filtered.slice(0, URL_LIST_LIMIT)
+    return needle ? urls.filter((entry) => entry.url.toLowerCase().includes(needle)) : urls
   }, [urls, query])
+
+  const page = useMemo(() => paginate(matches, currentPage, pageSize), [matches, currentPage, pageSize])
+
+  // Membership as a Set: the row loop asks "is this URL selected?" once per
+  // visible row, and `Array.includes` made that O(rows x selected). Harmless at
+  // 200, wasteful once the list is unbounded.
+  const selectedSet = useMemo(() => new Set(selected), [selected])
+
+  /**
+   * Searching starts the results over from the first page.
+   *
+   * Done here rather than in an effect on `query` because an effect would run
+   * *after* the render, so one frame would still be showing the old page of the
+   * new, much shorter result set.
+   */
+  const onQueryChange = useCallback((value: string) => {
+    setQuery(value)
+    setCurrentPage(0)
+  }, [])
+
+  /** Changing the page size keeps the first visible row in view. */
+  const onPageSizeChange = useCallback((size: number) => {
+    setPageSize(size)
+    setCurrentPage(0)
+  }, [])
 
   // Typing a custom count overrides the checkbox list, which is why the two are
   // mutually exclusive and why `selected` is ignored while `custom` is set.
@@ -144,6 +181,10 @@ export function SiteTab() {
   const onDiscover = useCallback(async (): Promise<void> => {
     if (!(await ensurePermission())) return
     setPhase('discovering')
+    // A new URL list is about to replace this one, so start reading it from the
+    // top. The selection is deliberately left alone: re-discovering is often
+    // "I want to add the pages I missed", not "start over".
+    setCurrentPage(0)
     await send({ type: 'site:discover', seedUrl })
   }, [ensurePermission, send, seedUrl])
 
@@ -228,7 +269,7 @@ export function SiteTab() {
 
       {phase === 'discovering' && (
         <section className="flex flex-col items-center gap-2.5 rounded-lg border border-line bg-surface px-3.5 py-5 text-center shadow-soft">
-          <p className="text-xs text-muted">{state?.note ?? 'Looking for pages\u2026'}</p>
+          <p className="text-xs text-muted">{state?.note ?? 'Looking for pages…'}</p>
           <button className="btn border-line-strong bg-surface text-ink-soft hover:bg-surface-3" onClick={() => void send({ type: 'site:cancel' })}>
             <Icon name="stop" size={13} />
             Stop
@@ -291,14 +332,14 @@ export function SiteTab() {
 
           <SearchInput
             value={query}
-            onChange={setQuery}
+            onChange={onQueryChange}
             placeholder="Filter pages…"
-            count={shown.length}
+            count={matches.length}
           />
 
           <ul className="max-h-[210px] list-none overflow-auto rounded-md border border-line bg-surface">
-            {shown.map((entry) => {
-              const checked = custom.trim() === '' && selected.includes(entry.url)
+            {page.items.map((entry) => {
+              const checked = custom.trim() === '' && selectedSet.has(entry.url)
               return (
                 <li
                   key={entry.url}
@@ -334,8 +375,17 @@ export function SiteTab() {
               )
             })}
           </ul>
-          {urls.length > shown.length && (
-            <p className="text-xs text-muted">Showing {formatCount(shown.length)} of {formatCount(urls.length)}.</p>
+
+          {matches.length === 0 ? (
+            <p className="text-xs text-muted">No pages match “{query.trim()}”.</p>
+          ) : (
+            <Pagination
+              page={page}
+              total={matches.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={onPageSizeChange}
+            />
           )}
 
           <div className="sticky bottom-0 flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-2 shadow-lift">
@@ -369,8 +419,8 @@ export function SiteTab() {
               {formatCount(state.scanned)} of {formatCount(state.queue.length)} pages
             </p>
             <p className="flex flex-wrap items-center justify-center gap-1 text-xs text-muted">
-              {state.failed > 0 && `${state.failed} could not be fetched \u00b7 `}
-              {state.currentUrls[0] ? `Now: ${shortUrl(state.currentUrls[0])}` : 'Starting\u2026'}
+              {state.failed > 0 && `${state.failed} could not be fetched · `}
+              {state.currentUrls[0] ? `Now: ${shortUrl(state.currentUrls[0])}` : 'Starting…'}
             </p>
           </div>
           <p className="flex items-center gap-1.5 rounded-sm bg-surface-2 px-2 py-1.5 text-xs text-ink-soft">

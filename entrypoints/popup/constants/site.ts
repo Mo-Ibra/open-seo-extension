@@ -19,10 +19,18 @@ export const SCAN_PRESETS = [10, 25, 50, 100, 250, 500] as const
 export const SCAN_STEPS = ['Discover', 'Choose', 'Scan', 'Report'] as const
 
 /**
- * Hard cap on the checkbox list. A 1000-URL site would otherwise render 1000
- * checkboxes into a 420px-wide popup; the search box is how you reach the rest.
+ * How many URLs the page picker shows at once.
+ *
+ * This replaces an earlier hard cap of 200 rendered rows, which existed only to
+ * keep the DOM small. Pagination means the row count is now fixed regardless of
+ * how large the site is, so every discovered URL is browsable and the popup
+ * still renders the same amount of DOM. A 769-URL site shows 8 pages instead of
+ * an unreachable tail.
  */
-export const URL_LIST_LIMIT = 200
+export const URL_PAGE_SIZE = 100
+
+/** Page sizes offered in the picker. Must include `URL_PAGE_SIZE`. */
+export const URL_PAGE_SIZES = [50, 100, 200] as const
 
 /**
  * How many URLs are listed inside an expanded issue in the report. The full

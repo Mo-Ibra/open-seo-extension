@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { popupSources } from '../helpers/popup-sources'
+
 /**
  * Tailwind only generates the utilities it finds in the source, so a typo in a
  * class name silently renders unstyled. This compares the classes used in the
@@ -20,22 +22,13 @@ const builtCss = fs.existsSync(assetsDir)
 
 const describeIfBuilt = builtCss ? describe : describe.skip
 
-/** Every `.ts`/`.tsx` under the popup, recursively. */
-function popupSources(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) return popupSources(full)
-    return /\.tsx?$/.test(entry.name) ? [full] : []
-  })
-}
-
 /** Words that appear inside className strings but are not classes. */
 const NOT_CLASSES = new Set(['check', 'pass', 'warn', 'fail', 'line', 'mt-0.5', 'en-US'])
 
 function collectClasses(): string[] {
   const found = new Set<string>()
 
-  for (const file of popupSources(popupDir)) {
+  for (const file of popupSources()) {
     const source = fs.readFileSync(file, 'utf8')
 
     for (const match of source.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {

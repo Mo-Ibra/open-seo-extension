@@ -43,7 +43,7 @@ export function SocialTab({ page }: { page: PageData }) {
 
   const imageSize =
     og['image:width'] && og['image:height']
-      ? `${og['image:width']}\u00d7${og['image:height']}`
+      ? `${og['image:width']}×${og['image:height']}`
       : 'dimensions unknown'
   const missing = fields.filter(([, value]) => !value).length
 
