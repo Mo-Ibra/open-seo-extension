@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { browser } from 'wxt/browser'
 
 import { isPersistent, loadState } from '../../lib/crawl/store'
-import { createIdleState, type SiteEvent, type SiteRequest, type SiteScanState } from '../../lib/crawl/types'
+import { createIdleState, type SiteRequest, type SiteScanState } from '../../lib/crawl/types'
+import { onSiteState, sendSiteRequest } from '../../lib/platform/messaging'
 import { cn } from './cn'
 import { EmptyState } from './EmptyState'
 import { Icon } from './Icon'
@@ -75,37 +76,23 @@ export function SiteAuditTab() {
   }, [attempt])
 
   // Background broadcasts the full state on every change.
-  useEffect(() => {
-    const listener = (message: unknown): undefined => {
-      const event = message as SiteEvent
-      if (event?.type === 'site:state') {
-        setState(event.state)
-        setPhase(event.state.status)
-      }
-      return undefined
-    }
-    browser.runtime.onMessage.addListener(listener)
-    return () => {
-      const runtime = browser.runtime as unknown as {
-        onMessage: { removeListener?: (listener: (message: unknown) => undefined) => void }
-      }
-      runtime.onMessage.removeListener?.(listener)
-    }
-  }, [])
+  useEffect(() => onSiteState((next) => {
+    setState(next)
+    setPhase(next.status)
+  }), [])
 
   const send = useCallback(async (request: SiteRequest): Promise<void> => {
     setPermissionError(null)
-    try {
-      const next = (await browser.runtime.sendMessage(request)) as SiteScanState | undefined
-      if (!next) throw new Error('The background worker did not respond.')
+    const next = await sendSiteRequest(request)
+    if (next) {
       setState(next)
       setPhase(next.status)
-    } catch (error) {
-      setPermissionError(error instanceof Error ? error.message : String(error))
-      setLoadError(
-        'Could not talk to the background worker. Reload the extension in chrome://extensions, then try again.'
-      )
+      return
     }
+    setPermissionError('The background worker did not respond.')
+    setLoadError(
+      'Could not talk to the background worker. Reload the extension in chrome://extensions, then try again.'
+    )
   }, [])
 
   const urls = useMemo(() => state?.discovery?.urls ?? [], [state])
@@ -455,17 +442,7 @@ async function handshake(origin: string): Promise<SiteScanState | null> {
   })
 
   try {
-    const response = await Promise.race([
-      browser.runtime
-        .sendMessage({ type: 'site:getState', origin } satisfies SiteRequest)
-        .catch((error: unknown) => {
-          throw new Error(error instanceof Error ? error.message : String(error))
-        }),
-      timeout,
-    ])
-    return (response as SiteScanState | undefined) ?? null
-  } catch {
-    return null
+    return await Promise.race([sendSiteRequest({ type: 'site:getState', origin }), timeout])
   } finally {
     if (timer) clearTimeout(timer)
   }

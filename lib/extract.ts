@@ -108,7 +108,9 @@ export function extractFromDocument(
 
   /** Counts words in rendered text, skipping scripts/styles and hidden nodes. */
   function countWords(): number {
-    if (!doc.body) return 0
+    // `body` is missing on partial documents, so fall back to the root element.
+    const root = doc.body || doc.documentElement
+    if (!root) return 0
 
     const SKIP_TAGS = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']
     const WORDS = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu
@@ -116,7 +118,7 @@ export function extractFromDocument(
     const ELEMENT_NODE = 1
 
     let total = 0
-    const stack: ChildNode[] = [doc.body]
+    const stack: ChildNode[] = [root]
 
     while (stack.length > 0) {
       const node = stack.pop()!

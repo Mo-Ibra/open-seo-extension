@@ -53,6 +53,9 @@ npm run dev            # Chrome with hot reload
 npm run dev:firefox    # Firefox
 ```
 
+Run `npm test` before opening a PR — it covers the crawler, the worker state
+machine and the popup's platform adapters without needing a browser.
+
 ## Build
 
 ```
@@ -66,23 +69,43 @@ Load the unpacked build from `.output/chrome-mv3` via `chrome://extensions`
 
 ## Architecture
 
+- `entrypoints/background.ts` — wires the platform to the crawler. All it does
+  is register the message listener and hand off to `lib/crawl/job.ts`.
 - `entrypoints/popup/` — the React popup UI (Audit / Links / Social / Site tabs).
   Styles are Tailwind CSS v4 utilities; the design tokens live in
   `entrypoints/popup/popup.css` (`@theme`), which is also where the few
   custom utilities (`btn`, `hide-marker`, `skeleton`) are defined.
-- `entrypoints/background.ts` — the site-audit job: discovery, the scan queue,
-  persistence and progress broadcasts.
+- `lib/platform/` — the only modules that touch extension APIs
+  (`storage.ts`, `messaging.ts`). Everything in `lib/` else is platform-free and
+  runs in plain Node.
 - `lib/extract.ts` — one self-contained extractor. Injected into the live tab it
   reads that page's DOM; the crawler calls the same function with a parsed
-  document plus a base URL.
+  document plus a base URL. It must not reference module scope, and
+  `tests/unit/extract-selfcontained.test.ts` enforces that.
 - `lib/site-context.ts` — a second injected function that reads server-side
   signals (`robots.txt`, `X-Robots-Tag`) with same-origin requests.
 - `lib/audit.ts` — runs every check.
 - `lib/checks/` — one file per check. Adding a check is a small, self-contained
   PR.
 - `lib/crawl/` — the site crawler: `discover.ts` (sitemap → link crawl),
-  `sitemap.ts`, `robots.ts`, `normalize.ts`, `http.ts`, `scan.ts`,
-  `report.ts` (aggregation + CSV/JSON), `store.ts` (per-origin state).
+  `sitemap.ts`, `robots.ts`, `normalize.ts`, `http.ts`, `scan.ts`, `job.ts` (the
+  scan state machine), `report.ts` (aggregation + export), `store.ts`.
+
+## Tests
+
+```
+npm test           # vitest, single run
+npm run test:watch
+```
+
+70 tests, no browser required: the crawler runs against a localhost fixture
+server and the worker is driven through a fake `chrome` API
+(`tests/helpers/fake-chrome.ts`). Covered: URL normalization, sitemap parsing,
+report aggregation and exports, the injected extractor (including the
+self-containment guard), the scan state machine (discovery, scanning, cancel,
+resume-after-restart, page caps), storage capability fallbacks, message
+round-trips, and a Tailwind check that every class used in the components is
+actually generated in the built CSS.
 
 ### Permissions
 
