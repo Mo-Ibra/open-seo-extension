@@ -1,4 +1,4 @@
-import type { Check, Finding } from '../types'
+import type { Check } from '../types'
 
 const LABEL = 'Social tags'
 
