@@ -21,7 +21,7 @@ function hostname(url: string): string {
   }
 }
 
-export function SocialPanel({ page }: { page: PageData }) {
+export function SocialTab({ page }: { page: PageData }) {
   const og = page.social.openGraph
   const twitter = page.social.twitter
 

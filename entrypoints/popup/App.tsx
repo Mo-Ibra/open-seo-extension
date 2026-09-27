@@ -7,12 +7,12 @@ import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
 import { AuditSummary } from './tabs/audit/AuditSummary'
 import { EmptyState } from './shared/EmptyState'
-import { FindingCard } from './tabs/audit/FindingCard'
+import { FindingCard } from './tabs/site/FindingCard'
 import { Icon } from './shared/Icon'
 import { LinksPanel } from './tabs/links/LinksPanel'
 import { SerpPreview } from './tabs/audit/SerpPreview'
 import { SiteAuditTab } from './tabs/site/SiteAuditTab'
-import { SocialPanel } from './tabs/social/SocialPanel'
+import { SocialTab } from './tabs/social/SocialTab'
 import Skeleton from './shared/Skeleton'
 import NavTabs, { Tab } from './shared/NavTabs'
 import Footer from './shared/Footer'
@@ -108,7 +108,7 @@ export default function App() {
               </>
             )}
             {tab === 'links' && <LinksPanel page={state.page} />}
-            {tab === 'social' && <SocialPanel page={state.page} />}
+            {tab === 'social' && <SocialTab page={state.page} />}
           </>
         )}
 
