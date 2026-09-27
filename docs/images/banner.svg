@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Open SEO — local-first SEO inspector">
+  <title>Open SEO</title>
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c6ef5"/>
+      <stop offset="1" stop-color="#3b5bdb"/>
+    </linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f1f3f9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="#101828"/>
+  <circle cx="1108" cy="58" r="190" fill="#3b5bdb" opacity="0.10"/>
+  <circle cx="120" cy="280" r="150" fill="#3b5bdb" opacity="0.08"/>
+
+  <!--
+    The mark below is a hand-placed copy of the canonical logo, because GitHub
+    will not resolve an external <image href> inside an SVG it renders. Keep it
+    in sync with entrypoints/popup/images/logo.svg (24px grid, scale 2).
+  -->
+  <!-- Mark -->
+  <g transform="translate(80 100)">
+    <rect width="100" height="100" rx="22" fill="url(#accent)"/>
+    <g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"
+       transform="translate(20 26) scale(2.5)">
+      <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
+      <path d="M13.4 10.6 18 6"/>
+      <path d="M20.5 16a9 9 0 1 0-17 0"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="212" y="163" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="58" font-weight="700" fill="#ffffff" letter-spacing="-1.5">Open<tspan fill="#3b5bdb">SEO</tspan></text>
+  <text x="214" y="205" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="21" fill="#98a2b3">Local-first SEO inspector for Chrome, Edge and Firefox</text>
+
+  <!-- Privacy pill -->
+  <g transform="translate(80 232)">
+    <rect width="286" height="34" rx="17" fill="#ffffff" opacity="0.08"/>
+    <circle cx="19" cy="17" r="5" fill="#15a34a"/>
+    <text x="34" y="23" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="15" fill="#cbd5e1">No accounts. No tracking. No page ever sent out.</text>
+  </g>
+</svg>

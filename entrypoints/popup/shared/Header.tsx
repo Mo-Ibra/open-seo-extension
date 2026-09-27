@@ -1,3 +1,5 @@
+import logo from '../images/logo.svg'
+
 import { Icon } from './Icon'
 
 /**
@@ -20,9 +22,16 @@ export function Header({
 }) {
   return (
     <header className="sticky top-0 z-2 flex items-center justify-between gap-2 border-b border-line bg-linear-to-b from-surface to-canvas px-3 pt-2.5 pb-2">
-      <span className="text-sm font-medium tracking-tight">
-        Open<b className="font-bold text-accent">SEO</b>
-      </span>
+      {/* The wordmark is the logo mark alone at 20px: legible in a 28px-tall bar,
+          and it carries the brand without crowding the tab strip below. The
+          rounded corners are baked into the SVG, so no extra radius here. */}
+      <img
+        src={logo}
+        alt="Open SEO"
+        width={20}
+        height={20}
+        className="size-5 shrink-0"
+      />
       {isPageTab && (
         <button
           className="btn border-line-strong bg-surface px-2 py-1.5 text-ink-soft hover:bg-surface-3"
