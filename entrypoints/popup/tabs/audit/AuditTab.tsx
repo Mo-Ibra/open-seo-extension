@@ -5,7 +5,7 @@ import { cn } from '../../shared/cn'
 import { Icon } from '../../shared/Icon'
 
 /** One-line verdict for the current page: counts plus a proportional bar. */
-export function AuditSummary({ findings }: { findings: Finding[] }) {
+export function AuditTab({ findings }: { findings: Finding[] }) {
   const counts = useMemo(() => {
     const totals = { pass: 0, warn: 0, fail: 0 }
     for (const finding of findings) totals[finding.status]++

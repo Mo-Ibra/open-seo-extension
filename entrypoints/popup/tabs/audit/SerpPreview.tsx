@@ -1,20 +1,7 @@
 import type { PageData } from '../../../../lib/types'
+import { DESCRIPTION_LIMIT, FILL_TONE, TITLE_LIMIT } from '../../constants/constants'
 import { cn } from '../../shared/cn'
-
-const TITLE_LIMIT = 60
-const DESCRIPTION_LIMIT = 160
-
-function truncate(value: string, limit: number): string {
-  return value.length > limit ? `${value.slice(0, limit - 1)}\u2026` : value
-}
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return url
-  }
-}
+import { hostname, truncate } from './funcs'
 
 /** A rough preview of how the page's title/description may appear in search. */
 export function SerpPreview({ page }: { page: PageData }) {
@@ -62,8 +49,6 @@ export function SerpPreview({ page }: { page: PageData }) {
     </section>
   )
 }
-
-const FILL_TONE = { pass: 'bg-pass', warn: 'bg-warn', fail: 'bg-fail' } as const
 
 function Meter({
   label,

@@ -5,13 +5,13 @@ import { runAudit } from '../../lib/audit'
 import { extractFromDocument } from '../../lib/extract'
 import { extractSiteContext } from '../../lib/site-context'
 import type { Finding, PageData, SiteContext } from '../../lib/types'
-import { AuditSummary } from './tabs/audit/AuditSummary'
+import { AuditTab } from './tabs/audit/AuditTab'
 import { EmptyState } from './shared/EmptyState'
 import { FindingCard } from './tabs/site/FindingCard'
 import { Icon } from './shared/Icon'
-import { LinksPanel } from './tabs/links/LinksPanel'
+import { LinksTab } from './tabs/links/LinksTab'
 import { SerpPreview } from './tabs/audit/SerpPreview'
-import { SiteAuditTab } from './tabs/site/SiteAuditTab'
+import { SiteTab } from './tabs/site/SiteTab'
 import { SocialTab } from './tabs/social/SocialTab'
 import Skeleton from './shared/Skeleton'
 import NavTabs, { Tab } from './shared/NavTabs'
@@ -99,7 +99,7 @@ export default function App() {
             {tab === 'audit' && (
               <>
                 <SerpPreview page={state.page} />
-                <AuditSummary findings={state.findings} />
+                <AuditTab findings={state.findings} />
                 <div className="flex flex-col gap-1.5">
                   {state.findings.map((finding) => (
                     <FindingCard key={finding.id} finding={finding} />
@@ -107,12 +107,12 @@ export default function App() {
                 </div>
               </>
             )}
-            {tab === 'links' && <LinksPanel page={state.page} />}
+            {tab === 'links' && <LinksTab page={state.page} />}
             {tab === 'social' && <SocialTab page={state.page} />}
           </>
         )}
 
-        {tab === 'site' && <SiteAuditTab />}
+        {tab === 'site' && <SiteTab />}
       </main>
 
       <Footer />

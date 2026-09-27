@@ -7,6 +7,7 @@ import { EmptyState } from '../../shared/EmptyState'
 import { FindingCard } from './FindingCard'
 import { Icon } from '../../shared/Icon'
 import { ScoreRing } from './ScoreRing'
+import { download, host } from './funcs'
 
 type Filter = 'issues' | 'fail' | 'warn' | 'pass' | 'all'
 
@@ -261,17 +262,4 @@ export function ReportPanel({
       )}
     </div>
   )
-}
-
-function host(origin: string): string {
-  return origin.replace(/^https?:\/\//, '').replace(/[^\w.-]+/g, '-') || 'site'
-}
-
-function download(filename: string, content: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([content], { type }))
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  setTimeout(() => URL.revokeObjectURL(url), 2000)
 }

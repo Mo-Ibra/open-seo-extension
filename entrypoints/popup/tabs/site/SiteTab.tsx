@@ -21,7 +21,7 @@ const STEPS = ['Discover', 'Choose', 'Scan', 'Report']
 /** The background must answer quickly; if it does not, say so instead of spinning. */
 const HANDSHAKE_TIMEOUT_MS = 4000
 
-export function SiteAuditTab() {
+export function SiteTab() {
   const [state, setState] = useState<SiteScanState | null>(null)
   const [seedUrl, setSeedUrl] = useState<string>('')
   const [phase, setPhase] = useState<Phase>('loading')
