@@ -1,4 +1,4 @@
-import { cn } from './cn'
+import { cn } from '../../shared/cn'
 
 /** Circular score gauge used by the site report. */
 export function ScoreRing({

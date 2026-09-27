@@ -1,6 +1,6 @@
-import type { Finding } from '../../lib/types'
-import { cn } from './cn'
-import { Icon } from './Icon'
+import type { Finding } from '../../../../lib/types'
+import { cn } from '../../shared/cn'
+import { Icon } from '../../shared/Icon'
 
 const STATUS_ICON = { pass: 'check', warn: 'alert', fail: 'close' } as const
 

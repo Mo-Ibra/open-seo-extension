@@ -1,5 +1,5 @@
-import type { PageData } from '../../lib/types'
-import { cn } from './cn'
+import type { PageData } from '../../../../lib/types'
+import { cn } from '../../shared/cn'
 
 const TITLE_LIMIT = 60
 const DESCRIPTION_LIMIT = 160

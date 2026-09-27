@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 
-import { buildReport, toCsv, toJson } from '../../lib/crawl/report'
-import type { SiteScanState } from '../../lib/crawl/types'
-import { cn } from './cn'
-import { EmptyState } from './EmptyState'
-import { FindingCard } from './FindingCard'
-import { Icon } from './Icon'
+import { buildReport, toCsv, toJson } from '../../../../lib/crawl/report'
+import type { SiteScanState } from '../../../../lib/crawl/types'
+import { cn } from '../../shared/cn'
+import { EmptyState } from '../../shared/EmptyState'
+import { FindingCard } from '../audit/FindingCard'
+import { Icon } from '../../shared/Icon'
 import { ScoreRing } from './ScoreRing'
 
 type Filter = 'issues' | 'fail' | 'warn' | 'pass' | 'all'

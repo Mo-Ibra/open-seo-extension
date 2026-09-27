@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-import type { PageData } from '../../lib/types'
-import { cn } from './cn'
-import { Icon } from './Icon'
+import type { PageData } from '../../../../lib/types'
+import { cn } from '../../shared/cn'
+import { Icon } from '../../shared/Icon'
 
 function absolute(value: string | undefined, base: string): string | null {
   if (!value) return null

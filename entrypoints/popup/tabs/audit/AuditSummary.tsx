@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 
-import type { Finding } from '../../lib/types'
-import { cn } from './cn'
-import { Icon } from './Icon'
+import type { Finding } from '../../../../lib/types'
+import { cn } from '../../shared/cn'
+import { Icon } from '../../shared/Icon'
 
 /** One-line verdict for the current page: counts plus a proportional bar. */
 export function AuditSummary({ findings }: { findings: Finding[] }) {

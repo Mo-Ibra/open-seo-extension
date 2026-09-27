@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 
-import type { LinkInfo, PageData } from '../../lib/types'
-import { cn } from './cn'
-import { EmptyState } from './EmptyState'
-import { Icon } from './Icon'
+import type { LinkInfo, PageData } from '../../../../lib/types'
+import { cn } from '../../shared/cn'
+import { EmptyState } from '../../shared/EmptyState'
+import { Icon } from '../../shared/Icon'
 
 type Kind = 'all' | 'internal' | 'external' | 'empty'
 

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { browser } from 'wxt/browser'
 
-import { isPersistent, loadState } from '../../lib/crawl/store'
-import { createIdleState, type SiteRequest, type SiteScanState } from '../../lib/crawl/types'
-import { onSiteState, sendSiteRequest } from '../../lib/platform/messaging'
-import { cn } from './cn'
-import { EmptyState } from './EmptyState'
-import { Icon } from './Icon'
-import { ProgressRing } from './ProgressRing'
+import { isPersistent, loadState } from '../../../../lib/crawl/store'
+import { createIdleState, type SiteRequest, type SiteScanState } from '../../../../lib/crawl/types'
+import { onSiteState, sendSiteRequest } from '../../../../lib/platform/messaging'
+import { cn } from '../../shared/cn'
+import { EmptyState } from '../../shared/EmptyState'
+import { Icon } from '../../shared/Icon'
+import { ProgressRing } from '../../shared/ProgressRing'
 import { ReportPanel } from './ReportPanel'
 
 const PRESETS = [10, 25, 50, 100, 250, 500]
