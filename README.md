@@ -370,18 +370,6 @@ silently losing your scan.
   can be replaced in `lib/limits.ts` without touching callers.
 - **Scans are capped at 1000 pages** per run.
 
-## Roadmap
-
-- [x] Single-page audit with title, description, canonical, indexability, social, headings, links, word count
-- [x] Links and Social tabs
-- [x] Search-result preview
-- [x] Site crawler with sitemap discovery, background scanning, and a report
-- [x] CSV/JSON export
-- [ ] `alt` text check
-- [ ] JavaScript rendering for SPA pages in site scans
-- [ ] AI-search readiness checks
-- [ ] Lighthouse-style Core Web Vitals readout
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
